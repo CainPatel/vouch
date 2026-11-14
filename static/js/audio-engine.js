@@ -56,6 +56,10 @@ export class CallerAudioEngine {
 
       this.inputBus.connect(this.callerAnalyser);
       this.inputBus.connect(this.captureNode);
+      const silentSink = this.ctx.createGain();
+      silentSink.gain.value = 0;
+      this.captureNode.connect(silentSink);
+      silentSink.connect(this.ctx.destination);
       this.inputBus.connect(this.recordDest); // Include caller voice in demo recording mix
 
       this.playbackNode = new AudioWorkletNode(this.ctx, "pcm-playback-processor");
@@ -218,7 +222,7 @@ export class CallerAudioEngine {
     };
   }
 
-  stopMic() {
+  stopMic({ flushPlayback = false } = {}) {
     if (this.captureNode) {
       this.captureNode.port.postMessage({ active: false });
     }
@@ -240,6 +244,8 @@ export class CallerAudioEngine {
       } catch (_) {}
       this.micSource = null;
     }
-    this.flushAssistantPlayback();
+    if (flushPlayback) {
+      this.flushAssistantPlayback();
+    }
   }
 }

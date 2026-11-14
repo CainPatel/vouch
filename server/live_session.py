@@ -118,6 +118,7 @@ class GeminiLiveScreenerSession:
         self._greeting_task: asyncio.Task | None = None
         self._bg_tasks: set[asyncio.Task] = set()
         self._caller_spoke = False
+        self._on_hold = False
         self._pending_hangup = False
         self._verification_outcome: str | None = None
         self._verified_name: str = ""
@@ -227,8 +228,8 @@ class GeminiLiveScreenerSession:
     async def send_audio(self, pcm16k: bytes) -> None:
         if self._closed or not self._session or not pcm16k:
             return
-        # Ignore caller mic noise once verification answer is being announced so echo/noise can't interrupt final goodbye
-        if self._verification_outcome is not None or self._pending_hangup:
+        # Hold caller line once verification is active or call is ending so hold/closing speech isn't interrupted
+        if self._on_hold or self._verification_outcome is not None or self._pending_hangup:
             return
         try:
             await self._session.send_realtime_input(
@@ -326,7 +327,10 @@ class GeminiLiveScreenerSession:
             # Wait until spoken closing sentence has actually been generated before hanging up
             if self._verification_outcome is not None and self._post_tap_audio_bytes < 12000:
                 return
-            self._spawn(self.controller.finish_call_after_speech(delay_s=1.4))
+            closing_bytes = self._post_tap_audio_bytes if self._verification_outcome is not None else self._turn_audio_bytes
+            closing_audio_s = closing_bytes / 48000.0
+            drain_s = min(4.5, max(1.5, closing_audio_s * 0.75))
+            self._spawn(self.controller.finish_call_after_speech(delay_s=drain_s))
 
     async def _wait_and_inject_verification_result(
         self,
@@ -383,6 +387,7 @@ class GeminiLiveScreenerSession:
             logger.info("Live tool call: %s(%s)", name, args)
 
             if name == "request_family_verification":
+                self._on_hold = True
                 claimed_name = str(args.get("claimed_name") or "Jake")
                 relationship = str(args.get("relationship") or "family member")
                 ask = str(args.get("ask") or "urgent help")

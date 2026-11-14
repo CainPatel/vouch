@@ -161,8 +161,17 @@ function connectWs() {
   };
 }
 
+async function waitWsOpen(timeoutMs = 4000) {
+  const start = Date.now();
+  while ((!ws || ws.readyState !== WebSocket.OPEN) && Date.now() - start < timeoutMs) {
+    await new Promise((r) => setTimeout(r, 40));
+  }
+}
+
 async function startLiveCall({ withMic = true } = {}) {
+  await waitWsOpen();
   await audio.init({ enableMic: withMic });
+  audio.flushAssistantPlayback();
   audio.resetStats();
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: "start_call" }));
@@ -173,7 +182,7 @@ async function startLiveCall({ withMic = true } = {}) {
 
 callBtn.addEventListener("click", async () => {
   if (callActive) {
-    audio.stopMic();
+    audio.stopMic({ flushPlayback: true });
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: "end_call" }));
     }

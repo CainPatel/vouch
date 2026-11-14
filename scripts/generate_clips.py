@@ -37,7 +37,7 @@ CLIPS = [
 
 
 def _normalize_wav_with_padding(
-    raw_bytes: bytes, lead_silence_s: float = 0.35, tail_silence_s: float = 0.9
+    raw_bytes: bytes, lead_silence_s: float = 0.65, tail_silence_s: float = 2.2
 ) -> tuple[bytes, float]:
     """Ensure standard 16-bit mono RIFF WAV with clean leading/trailing silence for VAD & fake-mic."""
     if raw_bytes[:4] == b"RIFF":

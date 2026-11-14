@@ -31,3 +31,14 @@
   - Tool call: `request_family_verification(claimed_name='Jake', relationship='grandson', ask='bail money', amount='$4,000')`
   - Post-tap assistant speech: `"Jake says he isn't calling. Goodbye."` (3.74s audio)
   - Latency: `speech_to_first_audio_s = 0.227s`, `tap_to_first_audio_s = 0.689s` (target < 1.5s).
+
+## 2026-11-14 00:54 PST — Milestone M3 Complete (`m3`)
+- Connected `AudioWorkletNode` (`pcm-capture-processor`) through a zero-gain sink to `AudioContext.destination` so Chromium's WebAudio graph pulls mic/clip samples continuously.
+- Verified Chromium Secure Context requirement (`http://localhost:<port>` rather than `http://127.0.0.1:<port>`) and Chromium 159 `--use-file-for-fake-audio-capture=<wav>` format.
+- Added caller hold-mute while `request_family_verification` is active so background caller noise/loops never interrupt the assistant's hold or closing speech.
+- Passed `tests/test_hero_e2e.py::test_hero_fake_mic_once` end-to-end in 15.57s:
+  - `claimed_name`: `Jake`
+  - `verdict_text`: `Blocked: someone impersonating Jake asked for $4,000.`
+  - `speech_to_first_audio_s`: `1.445s`
+  - `tap_to_first_audio_s`: `0.502s`
+  - `post_tap_played_s`: `1.11s` (> 1.0s played in browser AudioWorklet)
