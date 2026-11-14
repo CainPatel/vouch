@@ -1,0 +1,26 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Node / Playwright caches
+node_modules/
+test-results/
+playwright-report/
+
+# OS / Editor
+.DS_Store
+*.swp
+*.swo
+
+# Runtime temp files (Note: artifacts/ is tracked at final submission per SPEC section 10, keep transient tmp separate)
+.tmp/
+*.pid

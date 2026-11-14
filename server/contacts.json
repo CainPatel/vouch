@@ -1,0 +1,17 @@
+{
+  "senior": {
+    "name": "Ruth"
+  },
+  "family": [
+    {
+      "id": "jake",
+      "name": "Jake",
+      "relationship": "grandson"
+    },
+    {
+      "id": "maya",
+      "name": "Maya",
+      "relationship": "daughter"
+    }
+  ]
+}
