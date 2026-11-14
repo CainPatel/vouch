@@ -1,4 +1,4 @@
-import { CallerAudioEngine } from "/static/js/audio-engine.js?v=3";
+import { CallerAudioEngine } from "/static/js/audio-engine.js?v=4";
 
 const params = new URLSearchParams(window.location.search);
 const room = (params.get("room") || "DEMO").toUpperCase();
@@ -18,6 +18,8 @@ const transcriptBox = document.getElementById("transcriptBox");
 const transcriptEmpty = document.getElementById("transcriptEmpty");
 const textForm = document.getElementById("textForm");
 const textInput = document.getElementById("textInput");
+const micStatusBanner = document.getElementById("micStatusBanner");
+const micSelect = document.getElementById("micSelect");
 
 const SCENARIOS = {
   grandson: {
@@ -181,9 +183,53 @@ async function waitWsOpen(timeoutMs = 4000) {
   }
 }
 
+async function refreshMicUI() {
+  if (!micStatusBanner) return;
+  if (audio.lastMicError) {
+    micStatusBanner.style.borderColor = "rgba(239, 68, 68, 0.65)";
+    micStatusBanner.style.color = "#fca5a5";
+    micStatusBanner.textContent = `Mic blocked (${audio.lastMicError}). Allow Microphone in Chrome & macOS System Settings -> Privacy -> Microphone, or click a scripted clip below.`;
+    return;
+  }
+  if (audio.activeMicLabel) {
+    micStatusBanner.style.borderColor = "rgba(34, 197, 94, 0.45)";
+    micStatusBanner.style.color = "#bbf7d0";
+    micStatusBanner.textContent = `Live mic active: ${audio.activeMicLabel} — speak now!`;
+  }
+  if (micSelect) {
+    const mics = await audio.listMicrophones();
+    if (mics.length > 1) {
+      micSelect.innerHTML = "";
+      for (const m of mics) {
+        const opt = document.createElement("option");
+        opt.value = m.deviceId;
+        opt.textContent = `Mic: ${m.label || m.deviceId}`;
+        if (
+          (audio.preferredDeviceId && m.deviceId === audio.preferredDeviceId) ||
+          (!audio.preferredDeviceId && audio.activeMicLabel && m.label === audio.activeMicLabel)
+        ) {
+          opt.selected = true;
+        }
+        micSelect.appendChild(opt);
+      }
+      micSelect.classList.remove("hidden");
+    }
+  }
+}
+
+if (micSelect) {
+  micSelect.addEventListener("change", async () => {
+    await audio.switchMicrophone(micSelect.value);
+    await refreshMicUI();
+  });
+}
+
 async function startLiveCall({ withMic = true } = {}) {
   await waitWsOpen();
   await audio.init({ enableMic: withMic });
+  if (withMic) {
+    await refreshMicUI();
+  }
   audio.flushAssistantPlayback();
   audio.resetStats();
   if (ws && ws.readyState === WebSocket.OPEN) {

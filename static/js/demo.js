@@ -18,9 +18,9 @@ const recordBtn = document.getElementById("recordBtn");
 const countdownOverlay = document.getElementById("countdownOverlay");
 
 roomChip.textContent = `Room: ${room}`;
-callerFrame.src = `/caller?room=${encodeURIComponent(room)}&embed=1&v=3`;
-seniorFrame.src = `/senior?room=${encodeURIComponent(room)}&embed=1&v=3`;
-familyFrame.src = `/family?room=${encodeURIComponent(room)}&embed=1&v=3`;
+callerFrame.src = `/caller?room=${encodeURIComponent(room)}&embed=1&v=4`;
+seniorFrame.src = `/senior?room=${encodeURIComponent(room)}&embed=1&v=4`;
+familyFrame.src = `/family?room=${encodeURIComponent(room)}&embed=1&v=4`;
 
 const familyUrl = `${window.location.origin}/family?room=${encodeURIComponent(room)}`;
 qrImage.src = `/api/qr?url=${encodeURIComponent(familyUrl)}`;
@@ -148,8 +148,26 @@ recordBtn.addEventListener("click", async () => {
       audio: true,
     });
   } catch (err) {
-    console.warn("Screen share cancelled:", err);
+    console.warn("Screen share failed/cancelled:", err);
+    const msg = err && err.name === "NotAllowedError"
+      ? "Screen recording was cancelled or blocked. Choose the 'Chrome Tab' ('Vouch · Live Demo View') and click Share — or check macOS System Settings -> Privacy & Security -> Screen & System Audio Recording -> Google Chrome."
+      : `Could not start screen capture: ${err}`;
+    alert(msg);
     return;
+  }
+
+  // Prepare Caller iframe Web Audio recording stream BEFORE countdown finishes
+  let iframeAudioTracks = [];
+  try {
+    const iframeStream =
+      callerFrame.contentWindow &&
+      callerFrame.contentWindow.__vouchGetRecordStream &&
+      (await callerFrame.contentWindow.__vouchGetRecordStream());
+    if (iframeStream && iframeStream.getAudioTracks().length > 0) {
+      iframeAudioTracks = iframeStream.getAudioTracks();
+    }
+  } catch (err) {
+    console.warn("Could not attach caller audio mix:", err);
   }
 
   // 3-second countdown per SPEC section 10b
@@ -160,45 +178,38 @@ recordBtn.addEventListener("click", async () => {
   }
   countdownOverlay.classList.add("hidden");
   recordBtn.classList.add("hidden"); // Hide button while recording per SPEC 10b
+  roomChip.textContent = `● REC · Room: ${room} (Esc or click to stop)`;
+  roomChip.style.borderColor = "rgba(239, 68, 68, 0.7)";
+  roomChip.style.color = "#fca5a5";
+  roomChip.style.cursor = "pointer";
 
-  // Mix Caller iframe Web Audio bus (caller mic/clips + assistant voice) cleanly without double-mixing tab audio
-  const mixCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (mixCtx.state === "suspended") {
-    await mixCtx.resume().catch(() => {});
-  }
-  const mixDest = mixCtx.createMediaStreamDestination();
-
-  let attachedCallerBus = false;
-  try {
-    const iframeStream =
-      callerFrame.contentWindow &&
-      callerFrame.contentWindow.__vouchGetRecordStream &&
-      (await callerFrame.contentWindow.__vouchGetRecordStream());
-    if (iframeStream && iframeStream.getAudioTracks().length > 0) {
-      const iframeSrc = mixCtx.createMediaStreamSource(iframeStream);
-      iframeSrc.connect(mixDest);
-      attachedCallerBus = true;
-    }
-  } catch (err) {
-    console.warn("Could not attach caller audio mix:", err);
-  }
-
-  if (!attachedCallerBus && displayStream.getAudioTracks().length > 0) {
-    const dispSrc = mixCtx.createMediaStreamSource(displayStream);
-    dispSrc.connect(mixDest);
-  }
+  const audioTracks =
+    iframeAudioTracks.length > 0 ? iframeAudioTracks : displayStream.getAudioTracks();
 
   const combinedTracks = [
     ...displayStream.getVideoTracks(),
-    ...mixDest.stream.getAudioTracks(),
+    ...audioTracks,
   ];
   const combinedStream = new MediaStream(combinedTracks);
 
-  const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-    ? "video/webm;codecs=vp9,opus"
-    : "video/webm";
+  let recorder;
+  let mime = "video/webm";
+  for (const candidate of [
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm",
+  ]) {
+    if (MediaRecorder.isTypeSupported(candidate)) {
+      mime = candidate;
+      break;
+    }
+  }
+  try {
+    recorder = new MediaRecorder(combinedStream, { mimeType: mime });
+  } catch (_) {
+    recorder = new MediaRecorder(combinedStream);
+  }
   const chunks = [];
-  const recorder = new MediaRecorder(combinedStream, { mimeType: mime });
   activeRecorder = recorder;
 
   recorder.ondataavailable = (e) => {
@@ -219,6 +230,11 @@ recordBtn.addEventListener("click", async () => {
   }
 
   const finishRecording = () => {
+    roomChip.onclick = null;
+    roomChip.textContent = `Room: ${room}`;
+    roomChip.style.borderColor = "";
+    roomChip.style.color = "";
+    roomChip.style.cursor = "";
     for (const w of escTargets) {
       try {
         w.removeEventListener("keydown", onEsc);
@@ -228,6 +244,7 @@ recordBtn.addEventListener("click", async () => {
       recorder.stop();
     }
   };
+  roomChip.onclick = finishRecording;
   displayStream.getVideoTracks()[0].addEventListener("ended", finishRecording);
   for (const w of escTargets) {
     try {
@@ -243,7 +260,6 @@ recordBtn.addEventListener("click", async () => {
     } catch (_) {}
     recordBtn.classList.remove("hidden");
     for (const t of displayStream.getTracks()) t.stop();
-    mixCtx.close().catch(() => {});
     const blob = new Blob(chunks, { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

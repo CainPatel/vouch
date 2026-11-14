@@ -20,6 +20,9 @@ export class CallerAudioEngine {
     this.scheduledSources = new Set();
     this.nextPlayTime = 0;
     this.recordingActive = false;
+    this.preferredDeviceId = "";
+    this.activeMicLabel = "";
+    this.lastMicError = "";
     this.muted = false;
     this.pushToTalk = false;
     this.pttHeld = false;
@@ -82,21 +85,101 @@ export class CallerAudioEngine {
     }
   }
 
+  async _openBestMicrophone() {
+    this.lastMicError = "";
+    const baseAudio = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+      channelCount: 1,
+    };
+
+    const firstConstraints = this.preferredDeviceId
+      ? { audio: { ...baseAudio, deviceId: { exact: this.preferredDeviceId } }, video: false }
+      : { audio: baseAudio, video: false };
+
+    let stream = await navigator.mediaDevices.getUserMedia(firstConstraints);
+
+    // If user didn't manually pick a device, check if macOS Continuity Camera ("iPhone"/"iPad") hijacked the mic
+    if (!this.preferredDeviceId && navigator.mediaDevices.enumerateDevices) {
+      const currentTrack = stream.getAudioTracks()[0];
+      const currentLabel = (currentTrack && currentTrack.label ? currentTrack.label : "").toLowerCase();
+      const isContinuity =
+        currentLabel.includes("iphone") ||
+        currentLabel.includes("ipad") ||
+        currentLabel.includes("continuity");
+
+      if (isContinuity) {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const audioInputs = devices.filter(
+            (d) =>
+              d.kind === "audioinput" &&
+              d.deviceId &&
+              d.deviceId !== "default" &&
+              d.deviceId !== "communications"
+          );
+          const nonContinuity = audioInputs.filter((d) => {
+            const lbl = (d.label || "").toLowerCase();
+            return !lbl.includes("iphone") && !lbl.includes("ipad") && !lbl.includes("continuity");
+          });
+          // Prefer headphones/AirPods/USB first, otherwise built-in MacBook mic
+          const best =
+            nonContinuity.find((d) => !d.label.toLowerCase().includes("macbook")) ||
+            nonContinuity[0];
+          if (best) {
+            for (const t of stream.getTracks()) t.stop();
+            stream = await navigator.mediaDevices.getUserMedia({
+              audio: { ...baseAudio, deviceId: { exact: best.deviceId } },
+              video: false,
+            });
+            this.preferredDeviceId = best.deviceId;
+          }
+        } catch (swapErr) {
+          console.warn("Could not swap away from Continuity mic:", swapErr);
+        }
+      }
+    }
+
+    const activeTrack = stream.getAudioTracks()[0];
+    this.activeMicLabel = activeTrack ? activeTrack.label || "Active Microphone" : "";
+    return stream;
+  }
+
+  async listMicrophones() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return [];
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices.filter((d) => d.kind === "audioinput" && d.deviceId);
+    } catch {
+      return [];
+    }
+  }
+
+  async switchMicrophone(deviceId) {
+    this.preferredDeviceId = deviceId || "";
+    if (this.micStream) {
+      for (const t of this.micStream.getTracks()) t.stop();
+      this.micStream = null;
+    }
+    if (this.micSource) {
+      try {
+        this.micSource.disconnect();
+      } catch (_) {}
+      this.micSource = null;
+    }
+    if (this.ctx) {
+      await this.init({ enableMic: true });
+    }
+  }
+
   async init({ enableMic = true } = {}) {
     // Acquire mic FIRST when requested so macOS CoreAudio switches input profile BEFORE binding AudioContext output sink
     if (enableMic && !this.micStream) {
       try {
-        this.micStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            deviceId: { ideal: "default" },
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            channelCount: 1,
-          },
-          video: false,
-        });
+        this.micStream = await this._openBestMicrophone();
       } catch (err) {
+        this.lastMicError = err && err.message ? err.message : String(err);
         console.warn("Microphone unavailable (continuing with scripted clips/text):", err);
       }
     }

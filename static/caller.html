@@ -29,9 +29,10 @@
       <button class="btn-secondary hidden" id="pttHoldBtn" data-testid="ptt-hold-btn">Hold to Speak</button>
     </div>
 
-    <div class="hint-banner">
+    <div class="hint-banner" id="micStatusBanner">
       Headphones recommended for live open-mic voice so the mic doesn&rsquo;t pick up the speaker.
     </div>
+    <select id="micSelect" class="text-fallback-input hidden" style="padding: 6px 10px; font-size: 0.76rem;" aria-label="Select microphone"></select>
 
     <div class="section-label">Scripted Caller Clips</div>
     <div class="scenario-grid">
@@ -66,6 +67,6 @@
       <button type="submit" class="text-fallback-send" data-testid="caller-text-send">Send</button>
     </form>
   </main>
-  <script type="module" src="/static/js/caller.js?v=3"></script>
+  <script type="module" src="/static/js/caller.js?v=4"></script>
 </body>
 </html>
