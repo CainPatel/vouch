@@ -78,46 +78,33 @@ def main() -> None:
             page.on("websocket", on_ws)
             page.goto(f"{base_url}/demo", wait_until="networkidle")
 
-            # Inject burned-in cinema caption banner at bottom-center driven by live transcript events
+            # Highlight active speaker captions cleanly inside /demo's footer caption box (zero bezel overlap)
             page.evaluate(
                 """() => {
-                const banner = document.createElement('div');
-                banner.id = 'burnedCaptionOverlay';
-                Object.assign(banner.style, {
-                    position: 'fixed',
-                    bottom: '76px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    maxWidth: '1320px',
-                    padding: '10px 22px',
-                    borderRadius: '12px',
-                    background: 'rgba(5, 8, 17, 0.88)',
-                    border: '1px solid rgba(148, 163, 184, 0.35)',
-                    color: '#f8fafc',
-                    fontSize: '22px',
-                    fontWeight: '700',
-                    textAlign: 'center',
-                    zIndex: '9000',
-                    boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
-                    display: 'none',
-                });
-                document.body.appendChild(banner);
-
+                const cLine = document.getElementById('callerCaption');
+                const aLine = document.getElementById('assistantCaption');
                 const cText = document.getElementById('callerCaptionText');
                 const aText = document.getElementById('assistantCaptionText');
-                const obs = new MutationObserver(() => {
-                    banner.style.display = 'block';
-                });
-                if (cText) {
+                for (const el of [cText, aText]) {
+                    if (el) {
+                        el.style.fontSize = '1.02rem';
+                        el.style.fontWeight = '700';
+                    }
+                }
+                if (cText && cLine && aLine) {
                     new MutationObserver(() => {
-                        banner.style.display = 'block';
-                        banner.innerHTML = '<span style="color:#38bdf8">[Caller]</span> ' + cText.textContent;
+                        cLine.style.background = 'rgba(56, 189, 248, 0.14)';
+                        cLine.style.borderRadius = '6px';
+                        cLine.style.padding = '2px 8px';
+                        aLine.style.background = 'transparent';
                     }).observe(cText, { childList: true, characterData: true, subtree: true });
                 }
-                if (aText) {
+                if (aText && aLine && cLine) {
                     new MutationObserver(() => {
-                        banner.style.display = 'block';
-                        banner.innerHTML = '<span style="color:#4ade80">[Vouch Assistant]</span> ' + aText.textContent;
+                        aLine.style.background = 'rgba(74, 222, 128, 0.14)';
+                        aLine.style.borderRadius = '6px';
+                        aLine.style.padding = '2px 8px';
+                        cLine.style.background = 'transparent';
                     }).observe(aText, { childList: true, characterData: true, subtree: true });
                 }
             }"""

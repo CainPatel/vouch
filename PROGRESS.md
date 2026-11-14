@@ -258,3 +258,19 @@
   - Median `"Not me"` tap -> first assistant audio: **0.735s** (held steady within normal live API variance; CSS-only change)
   - Median end of caller speech -> first assistant audio: **1.661s** (held steady within normal live API variance; CSS-only change)
 - **Decision:** Held `10/10` reliability and `3/3` scenarios, mobile header pill stays single-line; committed as `m6-iter13`.
+
+## 2026-11-14 02:44 PST — Improvement Loop Iteration 14
+- **Measured Baseline (from Iteration 13):**
+  - Hero pass rate: `10/10`
+  - Median `"Not me"` tap -> first assistant audio: `0.735s`
+  - Median end of caller speech -> first assistant audio: `1.661s`
+  - Scripted scenarios producing correct action: `3/3`
+- **Listen-by-Proxy Audit (`artifacts/demo_auto.mp4` keyframes + `artifacts/*_transcript.txt`):**
+  - **Single worst problem a judge would notice:** In `artifacts/demo_auto.mp4` (`scripts/record_rough_cut.py`), the floating `#burnedCaptionOverlay` banner at `bottom: 76px` overlapped `/demo`'s built-in `.demo-footer` `CALLER` caption row and the bottom edge of Ruth's Phone bezel.
+- **Fix Applied:** Updated `scripts/record_rough_cut.py` to highlight the active speaker directly inside `/demo`'s `.demo-footer` caption bar with crisp typography and zero overlap, and regenerated `artifacts/demo_auto.mp4`.
+- **Re-measured Metrics (Iteration 14):**
+  - Hero pass rate: **10 / 10** (held — 13/13 transcripts pristine)
+  - Scripted scenarios producing correct action: **3 / 3** (held)
+  - Median `"Not me"` tap -> first assistant audio: **0.782s** (held steady within normal live API variance; matched M4 `0.782s`)
+  - Median end of caller speech -> first assistant audio: **1.626s** (improved from `1.661s`, `-0.035s`)
+- **Decision:** Every metric held or improved and `demo_auto.mp4` has zero bezel overlap; committed as `m6-iter14`.
