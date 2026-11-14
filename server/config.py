@@ -151,7 +151,7 @@ def _strip_prefix(name: str) -> str:
 
 
 def discover_models(force_refresh: bool = False) -> ResolvedModels:
-    """List models available to GEMINI_API_KEY at runtime per SPEC section 3."""
+    """Discover Gemini models available to GEMINI_API_KEY at runtime."""
     global _RESOLVED_MODELS
     if _RESOLVED_MODELS is not None and not force_refresh:
         return _RESOLVED_MODELS

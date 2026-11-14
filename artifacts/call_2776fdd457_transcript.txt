@@ -1,2 +1,0 @@
-[caller] Hi, this is Dana from Elm Street Pharmacy. Ruth's prescription is ready for pickup.
-[assistant] This is Ruth's assistant. Thank you — I'll connect you with Ruth right now.

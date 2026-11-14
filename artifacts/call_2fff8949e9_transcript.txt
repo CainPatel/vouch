@@ -1,3 +1,0 @@
-[caller] Grandma, it's Jake. I'm in trouble. I need $4,000 for bail. Please don't tell mom.
-[assistant] This is Ruth's assistant. One moment while I confirm with Jake.
-[assistant] Jake says he isn't calling. Goodbye.

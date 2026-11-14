@@ -139,7 +139,7 @@ def format_blocked_headline(
     scam_type: str,
     verification: VerificationRequest | None,
 ) -> str:
-    """Format Ruth's blocked verdict card cleanly (matching SPEC section 1 step 5)."""
+    """Format Ruth's blocked-call verdict headline."""
     if verification and verification.claimed_name:
         name = verification.claimed_name.strip()
         amt = (verification.amount or "").strip()

@@ -21,7 +21,19 @@ playwright-report/
 *.swp
 *.swo
 
-# Runtime temp files (Note: artifacts/ is tracked at final submission per SPEC section 10, keep transient tmp separate)
+# Runtime & local-only files
 .tmp/
 *.pid
 static/tunnel.json
+artifacts/
+
+# Local hackathon notes, scripts & submission drafts
+SPEC.md
+PROGRESS.md
+BLOCKED.md
+MORNING.md
+DEMO_SCRIPT.md
+PITCH_SCRIPT.md
+ONE_PAGER*
+scripts/make_demo_video.sh
+scripts/record_rough_cut.py

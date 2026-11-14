@@ -476,7 +476,7 @@ class RoomSessionController:
             },
         )
 
-        # Transition back to idle after terminal state per SPEC (`passed | blocked | message_taken -> idle`)
+        # Return room state to idle after completing a terminal call state
         self.room.transition(CallState.IDLE)
         await self.hub.broadcast_json(
             self.room.code, {"type": "status", "state": CallState.IDLE.value}

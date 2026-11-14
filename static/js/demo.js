@@ -186,7 +186,7 @@ function connectDemoWs() {
 }
 connectDemoWs();
 
-// Section 10b: Record button on /demo (getDisplayMedia + Web Audio mix -> MediaRecorder -> .webm)
+// Record button on /demo (getDisplayMedia + Web Audio mix -> MediaRecorder -> .webm)
 let activeRecorder = null;
 
 recordBtn.addEventListener("click", async () => {

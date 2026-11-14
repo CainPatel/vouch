@@ -2,33 +2,18 @@
 
 **Stop family impersonation scams before an older adult's phone ever rings.**
 
-Vouch is a real-time AI call screener built with the **Gemini Live API** (`gemini-3.8-live`), **Gemini 4 Carbon** (`gemini-4-carbon`), and **Gemini TTS** (`gemini-3.8-flash-tts`) for the Berkeley x DeepMind Hackathon.
-
-> **Hosted Prototype:** *(Deploy with `scripts/deploy.sh` — see Cloud Run section below or `MORNING.md`)*
+> Built for the **Google DeepMind Hackathon** using the **Gemini Live API** (`gemini-3.8-live`), **Gemini 4 Carbon** (`gemini-4-carbon`), and **Gemini TTS** (`gemini-3.8-flash-tts`).
 
 ---
 
-## What Vouch Does
+## Overview
 
-Scammers increasingly use spoofed local numbers and panicked urgency (*"Grandma, it's Jake, I'm in jail, I need $4,000 for bail — please don't tell Mom"*) or fake bank security alerts to steal older adults' savings. Rather than guessing whether a voice is synthetic, **Vouch verifies identity claims out-of-band before ringing the senior's phone**:
+Phone scammers increasingly combine spoofed local numbers, leaked personal details, and AI-cloned voices to run high-pressure "grandparent" and fake bank-fraud attacks (*"Grandma, it's Jake — I'm in jail and need $4,000 for bail, please don't tell Mom"*). Rather than trying to classify synthetic audio artifacts, **Vouch verifies identity claims out-of-band in real time before ringing the senior's phone**:
 
-1. **Unknown callers talk to Vouch first:** Vouch always announces itself as Ruth's assistant while Ruth's phone stays silent.
-2. **Routine business rings right through:** Legitimate everyday calls (e.g., Elm Street Pharmacy confirming a prescription pickup) are passed through with a one-line summary.
-3. **Bank, government & tech-support claims are stopped cold:** Never connected; Ruth is calmly reminded she can call the official number on her card directly.
-4. **Family claims trigger a live one-tap check on the real relative's phone:** When someone claims to be Ruth's grandson Jake asking for $4,000 bail, Gemini Live places the caller on hold and pushes a real-time verification card to Jake's phone (`/family?room=CODE`). When Jake taps **Not me**, Vouch immediately speaks out loud — *"Jake says he isn't calling. Goodbye."* — disconnects the call, logs the blocked attempt, and **Gemini 4 Carbon** writes a plain-English security brief for the family.
-
----
-
-## Two-Command Local Setup
-
-**Prerequisites:** Python 3.11+ with [`uv`](https://docs.astral.sh/uv/) and a `GEMINI_API_KEY` from Google AI Studio.
-
-```bash
-cp .env.example .env && make install   # Put your GEMINI_API_KEY in .env
-make run                               # Starts FastAPI + WebSocket hub at http://localhost:8080
-```
-
-Open **`http://localhost:8080/demo`** in Chrome (wear headphones for live open-mic conversations, or click any of the three scripted caller scenario clips). Scan the on-screen QR code on a second phone to open Jake's verification screen live.
+1. **Silent screening for unknown numbers:** Unknown callers speak to Vouch first while the protected senior's phone (*Ruth*) stays completely silent.
+2. **Everyday calls pass right through:** Legitimate callers (such as a neighborhood pharmacy confirming a prescription pickup) are connected immediately with a concise one-line summary.
+3. **Bank, government & tech-support claims are stopped cold:** High-risk institutional impersonators asking to move money or share codes are politely refused and disconnected without ever disturbing Ruth.
+4. **Live one-tap family verification:** When an unknown caller claims to be family in an emergency, Gemini Live places the caller on hold and pushes an instant verification card to the real relative's phone (`/family?room=CODE`). One tap on **Not me** causes Vouch to speak out loud (*"Jake says he isn't calling. Goodbye."*), terminate the call, log the blocked attempt, and generate an asynchronous **Gemini 4 Carbon** security brief for the family.
 
 ---
 
@@ -36,82 +21,119 @@ Open **`http://localhost:8080/demo`** in Chrome (wear headphones for live open-m
 
 ```mermaid
 flowchart LR
-    subgraph Browser["Browser / Second Device"]
-        Caller["/caller (Laptop Mic + AudioWorklets)<br/>16 kHz PCM In · 24 kHz PCM Out"]
-        Senior["/senior (Ruth's Phone)<br/>Silent Screening · Verdict · History"]
-        Family["/family (Jake's Real Phone via QR)<br/>One-Tap 'Yes' / 'Not me'"]
-        Demo["/demo (1080p Recording View)<br/>3 Phone Frames · Live Waveforms · Captions"]
+    subgraph Clients["Browser & Mobile Views"]
+        Caller["/caller · Unknown Caller<br/>16 kHz PCM Mic In · 24 kHz PCM Out"]
+        Senior["/senior · Protected Senior (Ruth)<br/>Silent Screening · Verdict · History"]
+        Family["/family · Trusted Contact (Jake)<br/>Mobile QR Link · One-Tap 'Yes' / 'Not me'"]
+        Demo["/demo · Unified Stage<br/>3 Live Views · QR · Waveforms · Captions"]
     end
 
-    subgraph Server["FastAPI + In-Memory RoomHub (Cloud Run)"]
-        WS["/ws?room=CODE&role=...<br/>JSON Events + Binary PCM"]
-        Ctrl["RoomSessionController<br/>State Machine & Latency Telemetry"]
+    subgraph Server["FastAPI + WebSocket Hub"]
+        WS["/ws?room=CODE&role=...<br/>JSON State Events + Binary PCM"]
+        Ctrl["RoomSessionController<br/>Call State Machine & Latency Telemetry"]
     end
 
-    subgraph Gemini["Google Gemini API (google-genai SDK)"]
-        Live["Gemini 3.8 Live<br/>(bidiGenerateContent · Native Audio · Tools)"]
-        Carbon["Gemini 4 Carbon<br/>(Post-Call Family Security Report)"]
-        TTS["Gemini 3.8 Flash TTS<br/>(Stock-Voice Scripted Caller Clips)"]
+    subgraph Gemini["Google Gemini Models (google-genai SDK)"]
+        Live["Gemini Live API (gemini-3.8-live)<br/>Bidirectional Native Audio + Tool Calling"]
+        Carbon["Gemini 4 Carbon (gemini-4-carbon)<br/>Structured Post-Call Security Brief"]
+        TTS["Gemini TTS (gemini-3.8-flash-tts)<br/>Scripted Scenario Audio Clips"]
     end
 
     Caller <-->|"16k/24k PCM + Events"| WS
-    Senior <-->|"Realtime Events"| WS
+    Senior <-->|"Realtime State"| WS
     Family <-->|"Verification Tap"| WS
     Demo <-->|"Captions & Telemetry"| WS
     WS <--> Ctrl
-    Ctrl <-->|"Bidirectional Audio + Tool Calls"| Live
-    Ctrl -->|"Async Post-Call Transcript"| Carbon
+    Ctrl <-->|"Live Audio + Function Calls"| Live
+    Ctrl -->|"Async Transcript Analysis"| Carbon
     TTS -.->|"Generates static/audio/*.wav"| Caller
 ```
 
----
+### Gemini Models & Capabilities Used
 
-## Gemini Models & Features Used
-
-| Model | Role in Vouch | Why This Model & Feature |
+| Model | Role in Vouch | Key Capabilities Used |
 |---|---|---|
-| **`gemini-3.8-live`** *(Gemini Live API)* | Real-time bidirectional voice screener | Streams raw `16 kHz` PCM audio in and `24 kHz` native audio out with automatic VAD (`silence_duration_ms=450`), live input/output audio transcriptions, and live function calling (`request_family_verification`, `block_call`, `pass_through`, `take_message`). Responds in `< 1s` after the family member taps **Not me**. |
-| **`gemini-4-carbon`** *(Gemini 4 Carbon)* | Post-call family security report | Runs asynchronously after hangup (`thinking_level="low"` + JSON structured output) so it never adds latency to live voice, turning the raw call transcript into a calm 4-part family brief: *Claim*, *Scam Pattern*, *What Vouch Did*, and *Recommended Next Step*. |
-| **`gemini-3.8-flash-tts`** *(Gemini TTS)* | Scripted caller clips & automated test audio | Synthesizes stock-voice (`Puck`, `Charon`, `Zephyr`) caller clips (`static/audio/*.wav`) that drive both the one-click demo buttons on `/caller` and Chromium's `--use-file-for-fake-audio-capture` browser reliability suite. |
+| **`gemini-3.8-live`** *(Gemini Live API)* | Real-time voice call screener | Raw `16 kHz` PCM input & `24 kHz` native audio output via WebSockets, automatic VAD (`450 ms`), live input/output speech transcription, and live tool calling (`request_family_verification`, `block_call`, `pass_through`, `take_message`). |
+| **`gemini-4-carbon`** | Post-call family security report | Runs asynchronously after call completion using JSON structured output to produce a calm 4-part summary (*Claim*, *Scam Pattern*, *Action Taken*, and *Recommended Next Step*) without adding voice latency. |
+| **`gemini-3.8-flash-tts`** | Scripted caller clips & E2E audio | Synthesizes multi-voice caller clips (`Puck`, `Charon`, `Zephyr`) used for one-click demo scenarios and automated browser audio testing. |
 
-Models are discovered dynamically at startup against `GEMINI_API_KEY` (and can be overridden via `VOUCH_LIVE_MODEL`, `VOUCH_REPORT_MODEL`, and `VOUCH_TTS_MODEL`).
-
----
-
-## Verified Latency & Reliability (Frozen M7 Benchmark)
-
-Measured end-to-end through Chromium's real `AudioWorklet` -> FastAPI WebSocket -> `gemini-3.8-live` bidirectional audio pipeline (`scripts/run_eval.py`):
-
-| Metric | Result |
-|---|---|
-| **10-run consecutive fake-mic hero pass rate** | **10 / 10 (100%)** |
-| **Median `"Not me"` tap -> first assistant audio** | **0.594s** *(target `< 1.5s`)* |
-| **Median end of caller speech -> first assistant audio** | **1.646s** |
-| **Scripted caller scenarios passing (`grandson`, `bank`, `pharmacy`)** | **3 / 3 (100%)** |
+*(Models are discovered dynamically against your `GEMINI_API_KEY` at startup with automatic fallbacks, and can be overridden via `VOUCH_LIVE_MODEL`, `VOUCH_REPORT_MODEL`, and `VOUCH_TTS_MODEL`.)*
 
 ---
 
-## Testing & Verification
+## Quickstart
 
+### Prerequisites
+- Python **3.11+** and [`uv`](https://docs.astral.sh/uv/)
+- A `GEMINI_API_KEY` from [Google AI Studio](https://aistudio.google.com/)
+
+### 1. Install & Configure
 ```bash
-make test     # Unit tests (state machine, verification timeout, room isolation, rate limits)
-make smoke    # Server-side Live API audio smoke test (WAV -> gemini-3.8-live -> tool -> WAV)
-make e2e      # Headless Chromium fake-microphone E2E test driving the full real audio path
+cp .env.example .env      # Add your GEMINI_API_KEY to .env
+make install              # Installs dependencies via uv
 ```
 
-To run the full 10-run consecutive reliability benchmark + all 3 scripted scenarios:
+### 2. Run Locally
 ```bash
-uv run python scripts/run_eval.py --runs 10 --scenarios --screenshots
+make run                  # Starts FastAPI + WebSocket hub on http://localhost:8080
+```
+
+Open **`http://localhost:8080/demo`** in Chrome:
+- **Live voice:** Plug in headphones (recommended for open-mic conversations) and click **Call Ruth** on the left phone, or click any of the three **Scripted Caller Clips** (*Grandson in jail*, *Bank fraud department*, *Elm Street Pharmacy*).
+- **Second-device phone check:** Scan the on-screen QR code with your phone to open Jake's verification screen (`/family?room=CODE`) and tap **Not me** live.
+  - On shared local Wi-Fi, Vouch automatically encodes your machine's LAN IP into the QR code.
+  - On isolated campus/guest Wi-Fi or 5G cellular, run **`make tunnel`** instead of `make run` to spin up an instant HTTPS tunnel wired directly into the QR code.
+- **UI preview mode (no API key required):** Run `make mock`.
+
+---
+
+## Project Structure
+
+```text
+vouch/
+├── server/
+│   ├── main.py              # FastAPI routes, WebSocket endpoint, dynamic QR SVG endpoint
+│   ├── hub.py               # Multi-room state coordinator, tool handlers & rate limiting
+│   ├── live_session.py      # Gemini Live API bidirectional audio & tool-call bridge
+│   ├── report.py            # Async Gemini 4 Carbon structured post-call security brief
+│   ├── mock_session.py      # Offline deterministic mock session for UI preview & unit tests
+│   ├── models.py            # Call state machine, room snapshots & latency telemetry
+│   ├── config.py            # Runtime model discovery & LAN/public URL resolution
+│   ├── contacts.json        # Protected senior & verified family contact directory
+│   └── prompts/screener.md  # System instructions for the real-time Vouch voice screener
+├── static/
+│   ├── demo.html            # Unified 3-phone live stage with QR sidebar, waveforms & captions
+│   ├── caller.html          # Unknown caller phone UI (mic capture + scripted scenario clips)
+│   ├── senior.html          # Protected senior (Ruth) UI
+│   ├── family.html          # Trusted relative (Jake) mobile verification UI
+│   ├── js/                  # Web Audio API 16k/24k PCM AudioWorklets & view controllers
+│   ├── css/styles.css       # Responsive UI & stage styling
+│   └── audio/               # Gemini TTS caller scenario clips (.wav)
+├── scripts/
+│   ├── deploy.sh            # One-command Google Cloud Run deployment
+│   ├── run_tunnel.py        # Instant HTTPS tunnel helper for mobile QR scanning
+│   ├── generate_clips.py    # Regenerates caller .wav clips via Gemini TTS
+│   ├── audio_smoke.py       # Headless Gemini Live API audio-in/audio-out smoke test
+│   └── run_eval.py          # Multi-run browser E2E latency & reliability benchmark
+└── tests/
+    ├── test_unit.py         # State machine, room isolation, timeout & API unit tests
+    └── test_hero_e2e.py     # Headless Chromium fake-microphone full-pipeline E2E test
 ```
 
 ---
 
-## Cloud Run Deployment
+## Testing & Cloud Run Deployment
 
+### Run Tests
+```bash
+make test     # Fast unit tests (state machine, room isolation, QR resolution, rate limits)
+make smoke    # Live Gemini audio smoke test (16 kHz WAV -> Gemini Live -> tool call -> 24 kHz WAV)
+make e2e      # Full Chromium AudioWorklet -> WebSocket -> Gemini Live E2E test
+```
+
+### Deploy to Google Cloud Run
 ```bash
 gcloud config set project YOUR_GCP_PROJECT_ID
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
-GEMINI_API_KEY="$(grep '^GEMINI_API_KEY=' .env | cut -d= -f2-)" bash scripts/deploy.sh
+bash scripts/deploy.sh
 ```
-
-`scripts/deploy.sh` configures `--min-instances=1 --max-instances=1 --timeout=3600 --session-affinity --no-cpu-throttling` so in-memory room state and bidirectional WebSocket audio streams stay pinned and warm.
+`scripts/deploy.sh` deploys the container with `--session-affinity` and pinned instance state so live multi-device rooms and bidirectional WebSocket audio streams stay synchronized.
