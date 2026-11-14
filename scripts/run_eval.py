@@ -134,10 +134,17 @@ def run_three_scenarios(base_url: str, take_screenshots: bool = False) -> dict[s
         deadline = time.time() + 25.0
         while time.time() < deadline:
             hl = senior_f2.get_by_test_id("senior-headline").inner_text().lower()
-            if "blocked:" in hl:
+            tr2 = senior_f2.get_by_test_id("senior-transcript").inner_text().lower()
+            if "blocked:" in hl and "assistant" in tr2:
                 results["bank"] = True
                 break
             page2.wait_for_timeout(200)
+        # Let assistant finish speaking rejection sentence cleanly before closing
+        finish2 = time.time() + 8.0
+        while time.time() < finish2:
+            if "call ruth" in caller_f2.get_by_test_id("call-ruth-btn").inner_text().lower():
+                break
+            page2.wait_for_timeout(250)
         if take_screenshots:
             page2.screenshot(path=str(screenshots_dir / "demo_05_bank_blocked.png"))
         ctx2.close()
@@ -159,6 +166,12 @@ def run_three_scenarios(base_url: str, take_screenshots: bool = False) -> dict[s
                 results["pharmacy"] = True
                 break
             page3.wait_for_timeout(200)
+        # Let assistant finish speaking pass-through confirmation cleanly before closing
+        finish3 = time.time() + 8.0
+        while time.time() < finish3:
+            if "call ruth" in caller_f3.get_by_test_id("call-ruth-btn").inner_text().lower():
+                break
+            page3.wait_for_timeout(250)
         if take_screenshots:
             page3.screenshot(path=str(screenshots_dir / "demo_06_pharmacy_passed.png"))
         ctx3.close()
