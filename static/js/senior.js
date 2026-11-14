@@ -29,6 +29,8 @@ let optimisticHistoryAdded = false;
 function updatePill(state) {
   statePill.className = `state-pill ${state}`;
   stateText.textContent = state.replace("_", " ");
+  transcriptEmpty.textContent =
+    state && state !== "idle" ? "Listening to incoming caller..." : "No active call.";
 }
 
 function showStatusCard(variant, kicker, headline, sub) {

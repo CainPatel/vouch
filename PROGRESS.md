@@ -226,3 +226,19 @@
   - Median `"Not me"` tap -> first assistant audio: **0.728s** (held within `0.017s` live Gemini API variance of `0.711s`)
   - Median end of caller speech -> first assistant audio: **1.728s** (held within `0.066s` live Gemini API variance of `1.662s` / M4 `1.725s`)
 - **Decision:** Held `10/10` reliability and `3/3` scenarios while keeping routine pharmacy pass-through calls private to Ruth's phone; committed as `m6-iter11`.
+
+## 2026-11-14 02:26 PST — Improvement Loop Iteration 12
+- **Measured Baseline (from Iteration 11):**
+  - Hero pass rate: `10/10`
+  - Median `"Not me"` tap -> first assistant audio: `0.728s`
+  - Median end of caller speech -> first assistant audio: `1.728s`
+  - Scripted scenarios producing correct action: `3/3`
+- **Listen-by-Proxy Audit (`artifacts/*_transcript.txt` + `artifacts/screenshots/demo_*.png`):**
+  - **Single worst problem a judge would notice:** In `demo_02_screening.png`, while a call was actively screening (`• SCREENING` and red `End Call`), the empty transcript placeholders on Caller's Phone and Ruth's Phone still read `'Tap "Call Ruth" or choose a scenario clip.'` and `"No active call."`.
+- **Fix Applied:** Updated `caller.js` and `senior.js` empty-transcript status copy during active calls to `"Call connected — listening..."` and `"Listening to incoming caller..."`.
+- **Re-measured Metrics (Iteration 12):**
+  - Hero pass rate: **10 / 10** (held — 13/13 transcripts pristine)
+  - Scripted scenarios producing correct action: **3 / 3** (held)
+  - Median `"Not me"` tap -> first assistant audio: **0.663s** (improved from `0.728s`, `-0.065s`)
+  - Median end of caller speech -> first assistant audio: **1.631s** (improved from `1.728s`, `-0.097s`)
+- **Decision:** Every metric held or improved (`10/10`, `3/3`, `0.663s` tap->voice, `1.631s` speech->voice) and `demo_02_screening.png` copy is coherent; committed as `m6-iter12`.

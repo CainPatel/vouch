@@ -61,9 +61,11 @@ function setStateUI(state) {
   if (inCall) {
     callBtn.className = "call-btn hangup";
     callBtnLabel.textContent = "End Call";
+    transcriptEmpty.textContent = "Call connected — listening...";
   } else {
     callBtn.className = "call-btn start";
     callBtnLabel.textContent = "Call Ruth";
+    transcriptEmpty.textContent = 'Tap "Call Ruth" or choose a scenario clip.';
   }
 }
 
