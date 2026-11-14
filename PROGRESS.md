@@ -50,3 +50,9 @@
   - Scripted scenarios correct action: **3 / 3** (`grandson`: blocked after verification, `bank`: blocked immediately, `pharmacy`: passed through ringing Ruth)
   - Median `speech_to_first_audio_s`: **1.725s** (range `1.466s`–`2.298s`)
   - Median `tap_to_first_audio_s`: **0.782s** (range `0.535s`–`1.372s`; target < `1.5s`)
+
+## 2026-11-14 01:06 PST — Milestone M5 Complete (`m5`)
+- Built `Dockerfile` (`python:3.12-slim`), `.dockerignore`, and `scripts/deploy.sh` (with `--allow-unauthenticated --min-instances=1 --max-instances=1 --timeout=3600 --session-affinity --no-cpu-throttling`).
+- Verified `.env` is excluded from the Docker image (`test ! -f /app/.env`).
+- Ran container locally via `docker run` and passed `tests/test_hero_e2e.py` against the containerized service (`16.06s`, `Blocked: someone impersonating Jake asked for $4,000.`).
+- Documented exact 3-command Cloud Run deployment at the top of `MORNING.md` and in `BLOCKED.md` (`gcloud` is not installed on this Mac per run rules).
