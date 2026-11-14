@@ -18,9 +18,9 @@ const recordBtn = document.getElementById("recordBtn");
 const countdownOverlay = document.getElementById("countdownOverlay");
 
 roomChip.textContent = `Room: ${room}`;
-callerFrame.src = `/caller?room=${encodeURIComponent(room)}&embed=1`;
-seniorFrame.src = `/senior?room=${encodeURIComponent(room)}&embed=1`;
-familyFrame.src = `/family?room=${encodeURIComponent(room)}&embed=1`;
+callerFrame.src = `/caller?room=${encodeURIComponent(room)}&embed=1&v=3`;
+seniorFrame.src = `/senior?room=${encodeURIComponent(room)}&embed=1&v=3`;
+familyFrame.src = `/family?room=${encodeURIComponent(room)}&embed=1&v=3`;
 
 const familyUrl = `${window.location.origin}/family?room=${encodeURIComponent(room)}`;
 qrImage.src = `/api/qr?url=${encodeURIComponent(familyUrl)}`;
@@ -236,6 +236,11 @@ recordBtn.addEventListener("click", async () => {
   }
 
   recorder.onstop = () => {
+    try {
+      if (callerFrame.contentWindow && callerFrame.contentWindow.__vouchSetRecordingActive) {
+        callerFrame.contentWindow.__vouchSetRecordingActive(false);
+      }
+    } catch (_) {}
     recordBtn.classList.remove("hidden");
     for (const t of displayStream.getTracks()) t.stop();
     mixCtx.close().catch(() => {});

@@ -1,4 +1,4 @@
-import { CallerAudioEngine } from "/static/js/audio-engine.js";
+import { CallerAudioEngine } from "/static/js/audio-engine.js?v=3";
 
 const params = new URLSearchParams(window.location.search);
 const room = (params.get("room") || "DEMO").toUpperCase();
@@ -52,9 +52,20 @@ const audio = new CallerAudioEngine({
 
 // Expose async recording mix stream initializer so /demo captures caller + assistant audio even if Record is clicked before Call Ruth
 window.__vouchGetRecordStream = async () => {
+  audio.recordingActive = true;
   await audio.init({ enableMic: false });
   return audio.recordDest ? audio.recordDest.stream : null;
 };
+window.__vouchSetRecordingActive = (flag) => {
+  audio.recordingActive = Boolean(flag);
+};
+
+// Synchronously unlock AudioContext on any pointer click inside Caller frame
+window.addEventListener("pointerdown", () => {
+  if (audio.ctx && audio.ctx.state !== "running") {
+    audio.ctx.resume().catch(() => {});
+  }
+});
 
 function setStateUI(state) {
   statePill.className = `state-pill ${state}`;

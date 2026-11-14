@@ -1,6 +1,7 @@
 // Shared WebAudio engine for Caller page:
-// - Captures live mic (with echo cancellation) AND scripted WAV clips through the SAME AudioWorklet -> 16kHz PCM -> WebSocket path
-// - Plays incoming 24kHz PCM gaplessly via PcmPlaybackProcessor
+// - Captures live mic (pinned to macOS "default" input with echo cancellation) AND scripted WAV clips
+//   through the SAME AudioWorklet -> 16kHz PCM -> WebSocket path
+// - Plays incoming 24kHz PCM gaplessly via native scheduled AudioBufferSourceNodes (stereo-safe across sample rates)
 // - Exposes AnalyserNodes + recording mix MediaStream for /demo waveforms & video recorder
 
 export class CallerAudioEngine {
@@ -12,11 +13,13 @@ export class CallerAudioEngine {
     this.micSource = null;
     this.inputBus = null;
     this.captureNode = null;
-    this.playbackNode = null;
     this.callerAnalyser = null;
     this.assistantAnalyser = null;
     this.recordDest = null;
     this.activeClipSource = null;
+    this.scheduledSources = new Set();
+    this.nextPlayTime = 0;
+    this.recordingActive = false;
     this.muted = false;
     this.pushToTalk = false;
     this.pttHeld = false;
@@ -33,12 +36,19 @@ export class CallerAudioEngine {
     window.__vouchAudioStats = this.stats;
   }
 
-  async init({ enableMic = true } = {}) {
-    if (!this.ctx) {
+  async _ensureAudioGraph() {
+    if (!this.ctx || this.ctx.state === "closed") {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AudioCtx();
-      await this.ctx.audioWorklet.addModule("/static/js/pcm-capture-worklet.js");
-      await this.ctx.audioWorklet.addModule("/static/js/pcm-playback-worklet.js");
+      this.ctx = new AudioCtx({ latencyHint: "interactive" });
+      // Resume synchronously on user gesture tick before any await
+      if (this.ctx.state === "suspended") {
+        this.ctx.resume().catch(() => {});
+      }
+      if (typeof this.ctx.setSinkId === "function") {
+        this.ctx.setSinkId("").catch(() => {});
+      }
+
+      await this.ctx.audioWorklet.addModule("/static/js/pcm-capture-worklet.js?v=2");
 
       this.inputBus = this.ctx.createGain();
       this.callerAnalyser = this.ctx.createAnalyser();
@@ -62,29 +72,23 @@ export class CallerAudioEngine {
       silentSink.connect(this.ctx.destination);
       this.inputBus.connect(this.recordDest); // Include caller voice in demo recording mix
 
-      this.playbackNode = new AudioWorkletNode(this.ctx, "pcm-playback-processor");
-      this.playbackNode.port.onmessage = (ev) => {
-        if (ev.data && ev.data.type === "played") {
-          const sec = ev.data.samples24k / 24000;
-          this.stats.playedSeconds += sec;
-          if (this.stats.postTapMarked) {
-            this.stats.postTapPlayedSeconds += sec;
-          }
-        }
-      };
-      this.playbackNode.connect(this.assistantAnalyser);
       this.assistantAnalyser.connect(this.ctx.destination);
       this.assistantAnalyser.connect(this.recordDest); // Include assistant voice in demo recording mix
+      this.nextPlayTime = 0;
     }
 
-    if (this.ctx.state === "suspended") {
-      await this.ctx.resume();
+    if (this.ctx.state !== "running") {
+      await this.ctx.resume().catch(() => {});
     }
+  }
 
+  async init({ enableMic = true } = {}) {
+    // Acquire mic FIRST when requested so macOS CoreAudio switches input profile BEFORE binding AudioContext output sink
     if (enableMic && !this.micStream) {
       try {
         this.micStream = await navigator.mediaDevices.getUserMedia({
           audio: {
+            deviceId: { ideal: "default" },
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
@@ -92,12 +96,27 @@ export class CallerAudioEngine {
           },
           video: false,
         });
-        this.micSource = this.ctx.createMediaStreamSource(this.micStream);
-        this.micSource.connect(this.inputBus);
       } catch (err) {
         console.warn("Microphone unavailable (continuing with scripted clips/text):", err);
       }
     }
+
+    await this._ensureAudioGraph();
+
+    if (enableMic && this.micStream && !this.micSource) {
+      try {
+        this.micSource = this.ctx.createMediaStreamSource(this.micStream);
+        this.micSource.connect(this.inputBus);
+      } catch (err) {
+        console.warn("Could not attach mic source:", err);
+      }
+    }
+
+    // Resume again after getUserMedia in case macOS CoreAudio suspended context during device activation
+    if (this.ctx && this.ctx.state !== "running") {
+      await this.ctx.resume().catch(() => {});
+    }
+
     this._syncMuteState();
     if (this.captureNode) {
       this.captureNode.port.postMessage({ active: true });
@@ -122,23 +141,69 @@ export class CallerAudioEngine {
   }
 
   enqueueAssistantPcm24k(arrayBuffer) {
-    if (!this.playbackNode) return;
-    const byteLen = arrayBuffer.byteLength;
-    const sec = byteLen / (24000 * 2);
-    this.stats.receivedBytes += byteLen;
+    if (!this.ctx || !this.assistantAnalyser) return;
+    if (this.ctx.state !== "running") {
+      this.ctx.resume().catch(() => {});
+    }
+
+    const evenLen = arrayBuffer.byteLength & ~1;
+    if (evenLen <= 0) return;
+
+    const sampleCount = evenLen >> 1;
+    const sec = sampleCount / 24000;
+    const isPostTapChunk = this.stats.postTapMarked;
+
+    this.stats.receivedBytes += evenLen;
     this.stats.receivedSeconds += sec;
-    if (this.stats.postTapMarked) {
-      this.stats.postTapReceivedBytes += byteLen;
+    if (isPostTapChunk) {
+      this.stats.postTapReceivedBytes += evenLen;
       this.stats.postTapReceivedSeconds += sec;
     }
-    const copy = arrayBuffer.slice(0);
-    this.playbackNode.port.postMessage(copy, [copy]);
+
+    const int16 = new Int16Array(arrayBuffer, 0, sampleCount);
+    const audioBuf = this.ctx.createBuffer(1, sampleCount, 24000);
+    const ch0 = audioBuf.getChannelData(0);
+    for (let i = 0; i < sampleCount; i++) {
+      ch0[i] = int16[i] / 32768.0;
+    }
+
+    const src = this.ctx.createBufferSource();
+    src.buffer = audioBuf;
+    src.connect(this.assistantAnalyser);
+
+    const now = this.ctx.currentTime;
+    const startAt = Math.max(now + 0.015, this.nextPlayTime);
+    this.nextPlayTime = startAt + audioBuf.duration;
+
+    this.scheduledSources.add(src);
+    let accounted = false;
+    const creditPlayed = (dur) => {
+      if (accounted) return;
+      accounted = true;
+      this.stats.playedSeconds += dur;
+      if (isPostTapChunk || this.stats.postTapMarked) {
+        this.stats.postTapPlayedSeconds += dur;
+      }
+    };
+
+    src.onended = () => {
+      this.scheduledSources.delete(src);
+      creditPlayed(sec);
+    };
+
+    src.start(startAt);
   }
 
   flushAssistantPlayback() {
-    if (this.playbackNode) {
-      this.playbackNode.port.postMessage({ type: "flush" });
+    for (const src of Array.from(this.scheduledSources)) {
+      try {
+        src.onended = null;
+        src.stop();
+        src.disconnect();
+      } catch (_) {}
     }
+    this.scheduledSources.clear();
+    this.nextPlayTime = this.ctx ? this.ctx.currentTime : 0;
   }
 
   setMuted(muted) {
@@ -164,6 +229,9 @@ export class CallerAudioEngine {
 
   async playScriptedClip(url) {
     await this.init({ enableMic: false });
+    if (this.ctx && this.ctx.state !== "running") {
+      await this.ctx.resume().catch(() => {});
+    }
     if (this.activeClipSource) {
       try {
         this.activeClipSource.stop();
@@ -183,10 +251,10 @@ export class CallerAudioEngine {
     const audioBuf = await this.ctx.decodeAudioData(raw);
     const src = this.ctx.createBufferSource();
     src.buffer = audioBuf;
-    // Feed into inputBus (drives capture worklet -> server AND waveform) AND local speakers softly so presenter hears it
+    // Feed into inputBus (drives capture worklet -> server AND waveform) AND local speakers so presenter hears it
     src.connect(this.inputBus);
     const monitorGain = this.ctx.createGain();
-    monitorGain.gain.value = 0.85;
+    monitorGain.gain.value = 0.9;
     src.connect(monitorGain);
     monitorGain.connect(this.ctx.destination);
 
@@ -232,6 +300,7 @@ export class CallerAudioEngine {
       } catch (_) {}
       this.activeClipSource = null;
     }
+    const hadMic = Boolean(this.micStream);
     if (this.micStream) {
       for (const t of this.micStream.getTracks()) {
         t.stop();
@@ -246,6 +315,17 @@ export class CallerAudioEngine {
     }
     if (flushPlayback) {
       this.flushAssistantPlayback();
+    }
+    // Reset AudioContext after mic teardown on macOS so VoiceProcessingIO/Continuity profile switches never leave a dead output sink
+    if (hadMic && !this.recordingActive && this.ctx && this.scheduledSources.size === 0) {
+      const oldCtx = this.ctx;
+      this.ctx = null;
+      this.inputBus = null;
+      this.captureNode = null;
+      this.callerAnalyser = null;
+      this.assistantAnalyser = null;
+      this.recordDest = null;
+      oldCtx.close().catch(() => {});
     }
   }
 }
