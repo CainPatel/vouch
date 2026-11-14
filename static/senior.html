@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ruth's Phone · Vouch</title>
-  <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="stylesheet" href="/static/css/styles.css?v=5" />
 </head>
 <body class="phone-body" id="bodyRoot">
   <main class="phone-app">
     <header class="phone-topbar">
       <div>
         <div class="phone-role">Protected Senior</div>
-        <div class="phone-owner">Ruth's Phone</div>
+        <div class="phone-owner">Ruth&rsquo;s Phone</div>
       </div>
       <div class="state-pill" id="statePill" data-testid="senior-state">
         <span class="dot"></span>
@@ -26,9 +26,9 @@
           <span class="ring-ripple delay"></span>
           <span class="ring-bell" aria-hidden="true">&#128222;</span>
         </span>
-        <span class="ring-label">Incoming Verified Call &middot; Ringing Now</span>
+        <span class="ring-label">Verified Call &middot; Ringing Now</span>
       </div>
-      <div class="status-kicker" id="statusKicker">Protected · Silent Mode</div>
+      <div class="status-kicker" id="statusKicker">Protected &middot; Silent Mode</div>
       <div class="status-headline" id="statusHeadline" data-testid="senior-headline">
         Unknown calls are answered by Vouch before Ruth&rsquo;s phone rings.
       </div>
@@ -45,16 +45,16 @@
       <div class="carbon-row" id="carbonNext"></div>
     </section>
 
-    <div class="section-label">Live Screening Transcript</div>
+    <div class="section-label">Live Screening Feed</div>
     <div class="transcript-box" id="transcriptBox" data-testid="senior-transcript">
       <div class="transcript-empty" id="transcriptEmpty">No active call.</div>
     </div>
 
-    <div class="section-label">Screened Call History</div>
+    <div class="section-label">Screened Call Log</div>
     <div class="history-list" id="historyList" data-testid="senior-history">
       <div class="transcript-empty">No screened calls yet.</div>
     </div>
   </main>
-  <script type="module" src="/static/js/senior.js"></script>
+  <script type="module" src="/static/js/senior.js?v=5"></script>
 </body>
 </html>

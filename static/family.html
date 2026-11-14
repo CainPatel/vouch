@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Jake's Phone · Family Check · Vouch</title>
-  <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="stylesheet" href="/static/css/styles.css?v=5" />
 </head>
 <body class="phone-body" id="bodyRoot">
   <main class="phone-app">
     <header class="phone-topbar">
       <div>
         <div class="phone-role">Trusted Family Contact</div>
-        <div class="phone-owner" id="familyOwnerTitle">Jake's Phone</div>
+        <div class="phone-owner" id="familyOwnerTitle">Jake&rsquo;s Phone</div>
       </div>
       <div class="state-pill" id="statePill" data-testid="family-state">
         <span class="dot"></span>
@@ -20,16 +20,20 @@
     </header>
 
     <section class="family-idle-card" id="idleCard" data-testid="family-idle-card">
-      <div class="status-kicker" style="color: var(--accent);">Vouch Family Link Ready</div>
+      <div class="shield-orb" aria-hidden="true">&#128737;</div>
+      <div class="status-kicker" style="color: var(--accent);">Family Link Connected</div>
       <div class="status-headline">Protecting Ruth</div>
       <div class="status-sub">
-        If an unknown caller ever claims to be you or asks Ruth for emergency money, a one-tap check will appear right here.
+        If an unknown caller claims to be you or asks Ruth for emergency money, an instant one-tap check appears right here.
       </div>
     </section>
 
     <section class="verify-alert-card hidden" id="verifyCard" data-testid="family-verification-card">
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <div class="verify-badge">Urgent Identity Check</div>
+      <div class="verify-top-group">
+        <div class="verify-badge">
+          <span class="pulse-dot amber"></span>
+          <span>Urgent Identity Check</span>
+        </div>
         <div class="verify-question" id="verifyQuestion" data-testid="verify-question">
           Someone claiming to be you is on the phone with Ruth asking for money. Is this you?
         </div>
@@ -47,7 +51,7 @@
             <div class="val" id="valAsk">bail</div>
           </div>
           <div class="verify-field">
-            <div class="lbl">Amount Requested</div>
+            <div class="lbl">Amount Asked</div>
             <div class="val amount" id="valAmount" data-testid="verify-amount">$4,000</div>
           </div>
         </div>
@@ -73,6 +77,6 @@
       <div class="carbon-row" id="carbonNext"></div>
     </section>
   </main>
-  <script type="module" src="/static/js/family.js"></script>
+  <script type="module" src="/static/js/family.js?v=5"></script>
 </body>
 </html>

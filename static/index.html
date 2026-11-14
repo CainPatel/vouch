@@ -3,19 +3,52 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vouch — AI Call Screener Against Impersonation Scams</title>
-  <link rel="stylesheet" href="/static/css/styles.css" />
+  <title>Vouch — Real-Time AI Call Screener Against Impersonation Scams</title>
+  <link rel="stylesheet" href="/static/css/styles.css?v=5" />
 </head>
-<body>
-  <main class="landing-wrap">
-    <div class="brand-pill">Vouch · Powered by Gemini Live API &amp; Gemini 4 Carbon</div>
-    <h1 class="landing-title">Stop family impersonation scams before the phone ever rings.</h1>
-    <p class="landing-copy">
-      Vouch answers unknown calls for older adults in real time, lets ordinary callers like the pharmacy right through, and holds anyone claiming to be family or a bank while it verifies out-of-band. When a scammer says &ldquo;Grandma, it&rsquo;s Jake, I need bail money,&rdquo; the real Jake gets a one-tap check on his phone and taps <strong>Not me</strong>. Ruth never hears the scam pitch, and the family sees exactly what happened.
-    </p>
-    <div>
-      <a class="btn-primary" href="/demo">Start demo &rarr;</a>
-    </div>
+<body class="landing-body">
+  <main class="landing-shell">
+    <nav class="landing-nav">
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true">V</span>
+        <span class="brand-name">Vouch</span>
+      </div>
+      <div class="brand-pill">
+        <span class="pulse-dot"></span>
+        <span>Gemini Live API &middot; Gemini 4 Carbon</span>
+      </div>
+    </nav>
+
+    <section class="landing-hero">
+      <h1 class="landing-title">
+        Stop family impersonation scams <span>before the phone ever rings.</span>
+      </h1>
+      <p class="landing-copy">
+        Vouch answers unknown calls for older adults in real time, lets ordinary callers like the pharmacy straight through, and holds anyone claiming to be family or a bank while verifying out-of-band. When a scammer says <em>&ldquo;Grandma, it&rsquo;s Jake, I need $4,000 for bail,&rdquo;</em> the real Jake gets a one-tap check on his phone and taps <strong>Not me</strong>.
+      </p>
+      <div class="landing-cta-row">
+        <a class="btn-primary" href="/demo">Launch Live Studio &rarr;</a>
+        <div class="landing-meta">Real-time bidirectional PCM audio &middot; Sub-second family verification</div>
+      </div>
+    </section>
+
+    <section class="landing-pillars">
+      <div class="pillar-card">
+        <div class="pillar-num">01 &middot; Screen Silently</div>
+        <div class="pillar-title">Answers before Ruth&rsquo;s phone rings</div>
+        <div class="pillar-desc">Known contacts ring normally. Unknown numbers talk to Vouch first over Gemini Live real-time voice.</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-num">02 &middot; Verify Out-of-Band</div>
+        <div class="pillar-title">One-tap check on the real relative&rsquo;s phone</div>
+        <div class="pillar-desc">Voice clones fail instantly when the real grandson taps &ldquo;Not me&rdquo; from his own device.</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-num">03 &middot; Explain Clearly</div>
+        <div class="pillar-title">Plain-English Gemini 4 Carbon report</div>
+        <div class="pillar-desc">Every blocked call generates a structured incident card for both the senior and trusted family.</div>
+      </div>
+    </section>
   </main>
 </body>
 </html>

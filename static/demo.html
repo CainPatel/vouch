@@ -3,58 +3,76 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vouch · Live Demo View</title>
+  <title>Vouch · Live Demo Studio</title>
   <link rel="stylesheet" href="/static/css/styles.css?v=5" />
 </head>
 <body class="demo-body">
   <header class="demo-header">
     <div class="demo-brand">
-      <div class="demo-logo">Vouch</div>
+      <a href="/" class="demo-logo-link">
+        <span class="brand-mark" aria-hidden="true">V</span>
+        <span class="demo-logo">Vouch</span>
+      </a>
       <div class="live-badge" id="liveBadge" data-testid="gemini-live-badge">
         <span class="pulse-dot"></span>
-        <span id="liveBadgeText">Gemini Live &middot; real-time audio</span>
+        <span id="liveBadgeText">Gemini Live &middot; Real-Time Audio</span>
       </div>
     </div>
     <div class="demo-header-right">
-      <div class="room-chip" id="roomChip" data-testid="room-code-chip">Room: ----</div>
-      <button class="record-btn" id="recordBtn" data-testid="record-demo-btn">Record Demo (.webm)</button>
+      <div class="room-chip" id="roomChip" data-testid="room-code-chip">Room &middot; ----</div>
+      <button class="ghost-btn" id="newRoomBtn" type="button" title="Create a fresh demo room">New Room</button>
+      <button class="record-btn" id="recordBtn" data-testid="record-demo-btn">
+        <span class="rec-dot" aria-hidden="true"></span>
+        <span>Record Demo (.webm)</span>
+      </button>
     </div>
   </header>
 
   <main class="phones-stage">
-    <div class="phone-bezel">
-      <div class="phone-notch"></div>
-      <iframe id="callerFrame" title="Caller Phone" allow="microphone; autoplay"></iframe>
+    <div class="phone-slot">
+      <div class="slot-caption"><span class="slot-step">01</span> Unknown Caller</div>
+      <div class="phone-bezel">
+        <div class="phone-notch"></div>
+        <iframe id="callerFrame" title="Caller Phone" allow="microphone; autoplay"></iframe>
+      </div>
     </div>
-    <div class="phone-bezel">
-      <div class="phone-notch"></div>
-      <iframe id="seniorFrame" title="Ruth's Phone"></iframe>
+
+    <div class="phone-slot">
+      <div class="slot-caption"><span class="slot-step">02</span> Ruth&rsquo;s Phone (Protected)</div>
+      <div class="phone-bezel">
+        <div class="phone-notch"></div>
+        <iframe id="seniorFrame" title="Ruth's Phone"></iframe>
+      </div>
     </div>
-    <div class="phone-bezel">
-      <div class="phone-notch"></div>
-      <iframe id="familyFrame" title="Jake's Phone"></iframe>
+
+    <div class="phone-slot">
+      <div class="slot-caption"><span class="slot-step">03</span> Jake&rsquo;s Phone (Family Check)</div>
+      <div class="phone-bezel">
+        <div class="phone-notch"></div>
+        <iframe id="familyFrame" title="Jake's Phone"></iframe>
+      </div>
     </div>
 
     <aside class="qr-sidebar">
-      <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div class="section-label" style="color: var(--accent);">Second Device (Jake)</div>
-        <div style="font-size: 0.92rem; font-weight: 800; line-height: 1.3;">
-          Scan on your phone to tap &ldquo;Not me&rdquo; live
-        </div>
+      <div class="sidebar-block">
+        <div class="sidebar-eyebrow">Real Phone Sync</div>
+        <div class="sidebar-heading">Scan on your iPhone to tap &ldquo;Not me&rdquo; live</div>
         <div class="qr-card-box">
           <img id="qrImage" alt="QR code for Jake's family verification page" />
         </div>
         <a id="qrLink" class="qr-url-link" target="_blank" rel="noopener"></a>
-        <button type="button" id="qrEditBtn" class="qr-edit-btn">Set public/LAN URL</button>
+        <button id="copyQrBtn" type="button" class="copy-link-btn">Copy Phone Link</button>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); padding-top: 10px;">
-        <div class="section-label">Latency Telemetry</div>
-        <div style="font-size: 0.78rem; color: var(--text-soft);" id="metricSpeech">
-          Speech &rarr; voice: <strong>&mdash;</strong>
+      <div class="sidebar-block telemetry-block">
+        <div class="sidebar-eyebrow">Live Latency</div>
+        <div class="telemetry-row" id="metricSpeech">
+          <span>Speech &rarr; voice</span>
+          <strong>&mdash;</strong>
         </div>
-        <div style="font-size: 0.78rem; color: var(--text-soft);" id="metricTap">
-          Tap &rarr; voice: <strong>&mdash;</strong>
+        <div class="telemetry-row" id="metricTap">
+          <span>Tap &rarr; voice</span>
+          <strong>&mdash;</strong>
         </div>
       </div>
     </aside>
@@ -63,12 +81,12 @@
   <footer class="demo-footer">
     <div class="waveforms-pair">
       <div class="wave-card">
-        <div class="wave-title">Caller Audio (16 kHz PCM In)</div>
-        <canvas class="wave-canvas" id="callerCanvas" width="190" height="40"></canvas>
+        <div class="wave-title"><span class="wave-dot cyan"></span>Caller 16 kHz In</div>
+        <canvas class="wave-canvas" id="callerCanvas" width="180" height="34"></canvas>
       </div>
       <div class="wave-card">
-        <div class="wave-title">Vouch Assistant (24 kHz Live Out)</div>
-        <canvas class="wave-canvas" id="assistantCanvas" width="190" height="40"></canvas>
+        <div class="wave-title"><span class="wave-dot green"></span>Vouch 24 kHz Out</div>
+        <canvas class="wave-canvas" id="assistantCanvas" width="180" height="34"></canvas>
       </div>
     </div>
 

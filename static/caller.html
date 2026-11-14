@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Caller · Vouch</title>
-  <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="stylesheet" href="/static/css/styles.css?v=5" />
 </head>
 <body class="phone-body" id="bodyRoot">
   <main class="phone-app">
     <header class="phone-topbar">
       <div>
         <div class="phone-role">Incoming Unknown Number</div>
-        <div class="phone-owner">Caller's Phone</div>
+        <div class="phone-owner">Caller&rsquo;s Phone</div>
       </div>
       <div class="state-pill" id="statePill" data-testid="caller-state">
         <span class="dot"></span>
@@ -20,6 +20,7 @@
     </header>
 
     <button class="call-btn start" id="callBtn" data-testid="call-ruth-btn">
+      <span class="call-icon" aria-hidden="true">&#9742;</span>
       <span id="callBtnLabel">Call Ruth</span>
     </button>
 
@@ -30,29 +31,29 @@
     </div>
 
     <div class="hint-banner" id="micStatusBanner">
-      Headphones recommended for live open-mic voice so the mic doesn&rsquo;t pick up the speaker.
+      Speak live with &ldquo;Call Ruth&rdquo; or click any 1-tap caller clip below.
     </div>
-    <select id="micSelect" class="text-fallback-input hidden" style="padding: 6px 10px; font-size: 0.76rem;" aria-label="Select microphone"></select>
+    <select id="micSelect" class="mic-select hidden" aria-label="Select microphone"></select>
 
-    <div class="section-label">Scripted Caller Clips</div>
+    <div class="section-label">One-Tap Demo Clips</div>
     <div class="scenario-grid">
       <button class="scenario-btn" data-scenario="grandson" data-testid="scenario-grandson">
-        <span>1. Grandson in jail ($4,000 bail)</span>
-        <span class="scenario-tag scam">Scam · Hero</span>
+        <span class="scenario-title"><span class="scen-idx">1</span> Grandson in jail ($4,000)</span>
+        <span class="scenario-tag scam">Hero Scam</span>
       </button>
       <button class="scenario-btn" data-scenario="bank" data-testid="scenario-bank">
-        <span>2. Bank fraud department</span>
+        <span class="scenario-title"><span class="scen-idx">2</span> Bank fraud department</span>
         <span class="scenario-tag scam">Scam</span>
       </button>
       <button class="scenario-btn" data-scenario="pharmacy" data-testid="scenario-pharmacy">
-        <span>3. Elm Street Pharmacy</span>
+        <span class="scenario-title"><span class="scen-idx">3</span> Elm Street Pharmacy</span>
         <span class="scenario-tag legit">Legitimate</span>
       </button>
     </div>
 
     <div class="section-label">Live Call Transcript</div>
     <div class="transcript-box" id="transcriptBox" data-testid="caller-transcript">
-      <div class="transcript-empty" id="transcriptEmpty">Tap &ldquo;Call Ruth&rdquo; or choose a scenario clip.</div>
+      <div class="transcript-empty" id="transcriptEmpty">Tap &ldquo;Call Ruth&rdquo; or choose a clip above.</div>
     </div>
 
     <form class="text-fallback-form" id="textForm">
@@ -61,12 +62,12 @@
         class="text-fallback-input"
         id="textInput"
         data-testid="caller-text-input"
-        placeholder="Testing fallback: type caller speech..."
+        placeholder="Or type caller speech..."
         autocomplete="off"
       />
       <button type="submit" class="text-fallback-send" data-testid="caller-text-send">Send</button>
     </form>
   </main>
-  <script type="module" src="/static/js/caller.js?v=4"></script>
+  <script type="module" src="/static/js/caller.js?v=5"></script>
 </body>
 </html>
