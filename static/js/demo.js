@@ -161,26 +161,31 @@ recordBtn.addEventListener("click", async () => {
   countdownOverlay.classList.add("hidden");
   recordBtn.classList.add("hidden"); // Hide button while recording per SPEC 10b
 
-  // Mix display audio (if any) + Caller iframe Web Audio mix (caller mic + assistant voice)
+  // Mix Caller iframe Web Audio bus (caller mic/clips + assistant voice) cleanly without double-mixing tab audio
   const mixCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (mixCtx.state === "suspended") {
+    await mixCtx.resume().catch(() => {});
+  }
   const mixDest = mixCtx.createMediaStreamDestination();
 
-  if (displayStream.getAudioTracks().length > 0) {
-    const dispSrc = mixCtx.createMediaStreamSource(displayStream);
-    dispSrc.connect(mixDest);
-  }
-
+  let attachedCallerBus = false;
   try {
     const iframeStream =
       callerFrame.contentWindow &&
       callerFrame.contentWindow.__vouchGetRecordStream &&
-      callerFrame.contentWindow.__vouchGetRecordStream();
+      (await callerFrame.contentWindow.__vouchGetRecordStream());
     if (iframeStream && iframeStream.getAudioTracks().length > 0) {
       const iframeSrc = mixCtx.createMediaStreamSource(iframeStream);
       iframeSrc.connect(mixDest);
+      attachedCallerBus = true;
     }
   } catch (err) {
     console.warn("Could not attach caller audio mix:", err);
+  }
+
+  if (!attachedCallerBus && displayStream.getAudioTracks().length > 0) {
+    const dispSrc = mixCtx.createMediaStreamSource(displayStream);
+    dispSrc.connect(mixDest);
   }
 
   const combinedTracks = [
@@ -200,18 +205,35 @@ recordBtn.addEventListener("click", async () => {
     if (e.data && e.data.size > 0) chunks.push(e.data);
   };
 
+  const escTargets = [
+    window,
+    callerFrame.contentWindow,
+    seniorFrame.contentWindow,
+    familyFrame.contentWindow,
+  ].filter(Boolean);
+
+  function onEsc(e) {
+    if (e.key === "Escape") {
+      finishRecording();
+    }
+  }
+
   const finishRecording = () => {
+    for (const w of escTargets) {
+      try {
+        w.removeEventListener("keydown", onEsc);
+      } catch (_) {}
+    }
     if (recorder.state !== "inactive") {
       recorder.stop();
     }
   };
   displayStream.getVideoTracks()[0].addEventListener("ended", finishRecording);
-  window.addEventListener("keydown", function onEsc(e) {
-    if (e.key === "Escape") {
-      window.removeEventListener("keydown", onEsc);
-      finishRecording();
-    }
-  });
+  for (const w of escTargets) {
+    try {
+      w.addEventListener("keydown", onEsc);
+    } catch (_) {}
+  }
 
   recorder.onstop = () => {
     recordBtn.classList.remove("hidden");

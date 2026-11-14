@@ -50,8 +50,11 @@ const audio = new CallerAudioEngine({
   },
 });
 
-// Expose recording mix stream for /demo same-origin parent
-window.__vouchGetRecordStream = () => (audio.recordDest ? audio.recordDest.stream : null);
+// Expose async recording mix stream initializer so /demo captures caller + assistant audio even if Record is clicked before Call Ruth
+window.__vouchGetRecordStream = async () => {
+  await audio.init({ enableMic: false });
+  return audio.recordDest ? audio.recordDest.stream : null;
+};
 
 function setStateUI(state) {
   statePill.className = `state-pill ${state}`;
@@ -225,6 +228,27 @@ for (const evName of ["mouseup", "mouseleave", "touchend"]) {
     }
   });
 }
+
+window.addEventListener("keydown", (e) => {
+  if (e.code === "Space" && audio.pushToTalk && document.activeElement !== textInput) {
+    e.preventDefault();
+    if (!audio.pttHeld) {
+      audio.setPttHeld(true);
+      pttHoldBtn.classList.add("active");
+    }
+  }
+});
+
+window.addEventListener("keyup", (e) => {
+  if (e.code === "Space" && audio.pushToTalk && audio.pttHeld) {
+    e.preventDefault();
+    audio.setPttHeld(false);
+    pttHoldBtn.classList.remove("active");
+    if (ws && ws.readyState === WebSocket.OPEN && callActive) {
+      ws.send(JSON.stringify({ type: "caller_speech_end" }));
+    }
+  }
+});
 
 document.querySelectorAll(".scenario-btn").forEach((btn) => {
   btn.addEventListener("click", async () => {
