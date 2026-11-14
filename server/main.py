@@ -4,13 +4,20 @@ import io
 import json
 import logging
 from contextlib import asynccontextmanager
+from urllib.parse import urlparse, urlunparse
 
 import segno
 from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from server.config import STATIC_DIR, discover_models, is_mock_mode, is_test_mode
+from server.config import (
+    STATIC_DIR,
+    discover_models,
+    is_mock_mode,
+    is_test_mode,
+    resolve_public_origin,
+)
 from server.hub import CapacityError, RateLimitError, RoomHub
 
 logging.basicConfig(
@@ -48,8 +55,24 @@ def _client_ip(request_or_ws: Request | WebSocket) -> str:
     return "127.0.0.1"
 
 
+def _public_origin(request_or_ws: Request | WebSocket) -> str:
+    scheme = (
+        request_or_ws.headers.get("x-forwarded-proto", "")
+        or getattr(request_or_ws.url, "scheme", "http")
+        or "http"
+    ).split(",")[0].strip()
+    if scheme in ("ws", "wss"):
+        scheme = "https" if scheme == "wss" else "http"
+    host = (
+        request_or_ws.headers.get("x-forwarded-host", "")
+        or request_or_ws.headers.get("host", "")
+        or "localhost:8080"
+    )
+    return resolve_public_origin(host_header=host, scheme=scheme)
+
+
 @app.get("/api/health")
-async def health():
+async def health(request: Request):
     models = discover_models()
     return {
         "ok": True,
@@ -60,6 +83,7 @@ async def health():
         "report_label": models.report_label,
         "tts_model": models.tts_model,
         "active_rooms": len(hub.rooms),
+        "public_origin": _public_origin(request),
     }
 
 
@@ -73,11 +97,38 @@ async def create_room():
 
 
 @app.get("/api/qr")
-async def qr_svg(url: str = Query(..., min_length=1, max_length=512)):
+async def qr_svg(
+    request: Request,
+    url: str = Query(..., min_length=1, max_length=512),
+):
+    parsed = urlparse(url)
+    if (parsed.hostname or "").lower() in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
+        origin = urlparse(_public_origin(request))
+        if origin.scheme and origin.netloc:
+            url = urlunparse(
+                (
+                    origin.scheme,
+                    origin.netloc,
+                    parsed.path,
+                    parsed.params,
+                    parsed.query,
+                    parsed.fragment,
+                )
+            )
+
     qr = segno.make(url, error="m")
     buf = io.BytesIO()
-    qr.save(buf, kind="svg", scale=4, border=2, dark="#0f172a", light="#ffffff")
-    return Response(content=buf.getvalue(), media_type="image/svg+xml")
+    qr.save(buf, kind="svg", omitsize=True, border=4, dark="#0f172a", light="#ffffff")
+    svg_text = buf.getvalue().decode("utf-8").replace(
+        "<svg ",
+        '<svg width="256" height="256" shape-rendering="crispEdges" ',
+        1,
+    )
+    return Response(
+        content=svg_text.encode("utf-8"),
+        media_type="image/svg+xml",
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
 
 
 @app.get("/")
@@ -158,6 +209,7 @@ async def websocket_endpoint(
     snap["live_model"] = models.live_model
     snap["report_label"] = f"Report by {models.report_label}"
     snap["mock"] = is_mock_mode()
+    snap["public_origin"] = _public_origin(websocket)
     await websocket.send_json(snap)
 
     try:

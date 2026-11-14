@@ -2,12 +2,14 @@ const params = new URLSearchParams(window.location.search);
 const room = (params.get("room") || "DEMO").toUpperCase();
 
 const roomChip = document.getElementById("roomChip");
+const newRoomBtn = document.getElementById("newRoomBtn");
 const liveBadgeText = document.getElementById("liveBadgeText");
 const callerFrame = document.getElementById("callerFrame");
 const seniorFrame = document.getElementById("seniorFrame");
 const familyFrame = document.getElementById("familyFrame");
 const qrImage = document.getElementById("qrImage");
 const qrLink = document.getElementById("qrLink");
+const copyQrBtn = document.getElementById("copyQrBtn");
 const callerCanvas = document.getElementById("callerCanvas");
 const assistantCanvas = document.getElementById("assistantCanvas");
 const callerCaptionText = document.getElementById("callerCaptionText");
@@ -17,18 +19,63 @@ const metricTap = document.getElementById("metricTap");
 const recordBtn = document.getElementById("recordBtn");
 const countdownOverlay = document.getElementById("countdownOverlay");
 
-roomChip.textContent = `Room: ${room}`;
-callerFrame.src = `/caller?room=${encodeURIComponent(room)}&embed=1&v=4`;
-seniorFrame.src = `/senior?room=${encodeURIComponent(room)}&embed=1&v=4`;
-familyFrame.src = `/family?room=${encodeURIComponent(room)}&embed=1&v=4`;
+roomChip.textContent = `Room · ${room}`;
+callerFrame.src = `/caller?room=${encodeURIComponent(room)}&embed=1&v=5`;
+seniorFrame.src = `/senior?room=${encodeURIComponent(room)}&embed=1&v=5`;
+familyFrame.src = `/family?room=${encodeURIComponent(room)}&embed=1&v=5`;
 
-const familyUrl = `${window.location.origin}/family?room=${encodeURIComponent(room)}`;
-qrImage.src = `/api/qr?url=${encodeURIComponent(familyUrl)}`;
-qrLink.href = familyUrl;
-qrLink.textContent = familyUrl;
+let activeFamilyUrl = `${window.location.origin}/family?room=${encodeURIComponent(room)}`;
 
-let callerBins = new Array(16).fill(0.04);
-let assistantBins = new Array(16).fill(0.04);
+function applyQrUrl(url) {
+  activeFamilyUrl = url;
+  qrImage.src = `/api/qr?url=${encodeURIComponent(url)}`;
+  qrLink.href = url;
+  try {
+    const parsed = new URL(url);
+    qrLink.textContent = `${parsed.host}/family?room=${room}`;
+  } catch {
+    qrLink.textContent = url;
+  }
+}
+
+applyQrUrl(activeFamilyUrl);
+
+// When opened on localhost, automatically resolve public HTTPS tunnel if present so phone QR scan works over Wi-Fi/5G
+if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+  fetch(`/static/tunnel.json?t=${Date.now()}`, { cache: "no-store" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((data) => {
+      if (data && data.public_origin && data.public_origin.startsWith("https://")) {
+        const cleanOrigin = data.public_origin.replace(/\/+$/, "");
+        applyQrUrl(`${cleanOrigin}/family?room=${encodeURIComponent(room)}`);
+      }
+    })
+    .catch(() => {});
+}
+
+if (copyQrBtn) {
+  copyQrBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(activeFamilyUrl);
+      const orig = copyQrBtn.textContent;
+      copyQrBtn.textContent = "Copied Link ✓";
+      setTimeout(() => {
+        copyQrBtn.textContent = orig;
+      }, 1600);
+    } catch {
+      window.open(activeFamilyUrl, "_blank", "noopener");
+    }
+  });
+}
+
+if (newRoomBtn) {
+  newRoomBtn.addEventListener("click", () => {
+    window.location.href = "/demo";
+  });
+}
+
+let callerBins = new Array(20).fill(0.05);
+let assistantBins = new Array(20).fill(0.05);
 let remoteCallerPulse = 0;
 let remoteAssistantPulse = 0;
 
@@ -39,7 +86,7 @@ window.addEventListener("message", (ev) => {
   }
 });
 
-function drawBars(canvas, bins, color, pulseBoost) {
+function drawBars(canvas, bins, colorTop, colorBottom, pulseBoost) {
   const ctx = canvas.getContext("2d");
   const w = canvas.width;
   const h = canvas.height;
@@ -47,16 +94,23 @@ function drawBars(canvas, bins, color, pulseBoost) {
 
   const count = bins.length;
   const gap = 3;
-  const barW = (w - gap * (count + 1)) / count;
-  ctx.fillStyle = color;
+  const barW = Math.max(2, (w - gap * (count + 1)) / count);
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, colorTop);
+  grad.addColorStop(1, colorBottom);
+  ctx.fillStyle = grad;
+
   for (let i = 0; i < count; i++) {
-    const wave = pulseBoost > 0.02 ? pulseBoost * (0.4 + 0.6 * Math.abs(Math.sin(Date.now() / 90 + i))) : 0;
+    const wave =
+      pulseBoost > 0.02
+        ? pulseBoost * (0.35 + 0.65 * Math.abs(Math.sin(Date.now() / 85 + i * 0.7)))
+        : 0;
     const val = Math.max(0.08, Math.min(1, (bins[i] || 0) + wave));
-    const barH = Math.max(3, val * (h - 8));
+    const barH = Math.max(3, val * (h - 6));
     const x = gap + i * (barW + gap);
     const y = (h - barH) / 2;
     ctx.beginPath();
-    ctx.roundRect(x, y, barW, barH, 2);
+    ctx.roundRect(x, y, barW, barH, 99);
     ctx.fill();
   }
 }
@@ -64,8 +118,8 @@ function drawBars(canvas, bins, color, pulseBoost) {
 function renderLoop() {
   remoteCallerPulse *= 0.92;
   remoteAssistantPulse *= 0.92;
-  drawBars(callerCanvas, callerBins, "#38bdf8", remoteCallerPulse);
-  drawBars(assistantCanvas, assistantBins, "#22c55e", remoteAssistantPulse);
+  drawBars(callerCanvas, callerBins, "#7dd3fc", "#0ea5e9", remoteCallerPulse);
+  drawBars(assistantCanvas, assistantBins, "#6ee7b7", "#10b981", remoteAssistantPulse);
   requestAnimationFrame(renderLoop);
 }
 requestAnimationFrame(renderLoop);
@@ -73,10 +127,10 @@ requestAnimationFrame(renderLoop);
 function updateMetrics(metrics) {
   if (!metrics) return;
   if (metrics.speech_to_first_audio_s != null) {
-    metricSpeech.innerHTML = `Speech &rarr; voice: <strong>${metrics.speech_to_first_audio_s.toFixed(2)}s</strong>`;
+    metricSpeech.innerHTML = `<span>Speech &rarr; voice</span><strong>${metrics.speech_to_first_audio_s.toFixed(2)}s</strong>`;
   }
   if (metrics.tap_to_first_audio_s != null) {
-    metricTap.innerHTML = `Tap &rarr; voice: <strong>${metrics.tap_to_first_audio_s.toFixed(2)}s</strong>`;
+    metricTap.innerHTML = `<span>Tap &rarr; voice</span><strong>${metrics.tap_to_first_audio_s.toFixed(2)}s</strong>`;
   }
 }
 
@@ -97,7 +151,7 @@ function connectDemoWs() {
       if (msg.mock) {
         liveBadgeText.textContent = "Mock mode · UI preview";
       } else {
-        liveBadgeText.textContent = "Gemini Live · real-time audio";
+        liveBadgeText.textContent = "Gemini Live · Real-Time Audio";
       }
       if (msg.transcripts && msg.transcripts.length > 0) {
         for (const t of msg.transcripts) {
@@ -107,17 +161,17 @@ function connectDemoWs() {
       }
       updateMetrics(msg.metrics);
     } else if (msg.type === "call_started") {
-      callerCaptionText.textContent = "Connected — listening...";
-      assistantCaptionText.textContent = "Screening incoming call...";
-      metricSpeech.innerHTML = `Speech &rarr; voice: <strong>&mdash;</strong>`;
-      metricTap.innerHTML = `Tap &rarr; voice: <strong>&mdash;</strong>`;
+      callerCaptionText.textContent = "Connected — listening to caller...";
+      assistantCaptionText.textContent = "Screening incoming call silently...";
+      metricSpeech.innerHTML = `<span>Speech &rarr; voice</span><strong>&mdash;</strong>`;
+      metricTap.innerHTML = `<span>Tap &rarr; voice</span><strong>&mdash;</strong>`;
     } else if (msg.type === "transcript") {
       if (msg.speaker === "caller") {
         callerCaptionText.textContent = msg.text;
-        remoteCallerPulse = 0.7;
+        remoteCallerPulse = 0.72;
       } else {
         assistantCaptionText.textContent = msg.text;
-        remoteAssistantPulse = 0.75;
+        remoteAssistantPulse = 0.78;
       }
     } else if (msg.type === "metrics") {
       updateMetrics(msg.metrics);
@@ -149,14 +203,14 @@ recordBtn.addEventListener("click", async () => {
     });
   } catch (err) {
     console.warn("Screen share failed/cancelled:", err);
-    const msg = err && err.name === "NotAllowedError"
-      ? "Screen recording was cancelled or blocked. Choose the 'Chrome Tab' ('Vouch · Live Demo View') and click Share — or check macOS System Settings -> Privacy & Security -> Screen & System Audio Recording -> Google Chrome."
-      : `Could not start screen capture: ${err}`;
+    const msg =
+      err && err.name === "NotAllowedError"
+        ? "Screen recording was cancelled or blocked. Select the 'Chrome Tab' ('Vouch · Live Demo View') and click Share — or enable Chrome under macOS System Settings -> Privacy & Security -> Screen & System Audio Recording."
+        : `Could not start screen capture: ${err}`;
     alert(msg);
     return;
   }
 
-  // Prepare Caller iframe Web Audio recording stream BEFORE countdown finishes
   let iframeAudioTracks = [];
   try {
     const iframeStream =
@@ -170,27 +224,25 @@ recordBtn.addEventListener("click", async () => {
     console.warn("Could not attach caller audio mix:", err);
   }
 
-  // 3-second countdown per SPEC section 10b
   countdownOverlay.classList.remove("hidden");
   for (const n of ["3", "2", "1"]) {
     countdownOverlay.textContent = n;
     await new Promise((r) => setTimeout(r, 1000));
   }
   countdownOverlay.classList.add("hidden");
-  recordBtn.classList.add("hidden"); // Hide button while recording per SPEC 10b
-  roomChip.textContent = `● REC · Room: ${room} (Esc or click to stop)`;
-  roomChip.style.borderColor = "rgba(239, 68, 68, 0.7)";
-  roomChip.style.color = "#fca5a5";
+  recordBtn.classList.add("hidden");
+  roomChip.textContent = `● REC · ${room} (Esc or click to stop)`;
+  roomChip.style.borderColor = "rgba(244, 63, 94, 0.75)";
+  roomChip.style.color = "#fda4af";
   roomChip.style.cursor = "pointer";
 
   const audioTracks =
     iframeAudioTracks.length > 0 ? iframeAudioTracks : displayStream.getAudioTracks();
 
-  const combinedTracks = [
+  const combinedStream = new MediaStream([
     ...displayStream.getVideoTracks(),
     ...audioTracks,
-  ];
-  const combinedStream = new MediaStream(combinedTracks);
+  ]);
 
   let recorder;
   let mime = "video/webm";
@@ -231,7 +283,7 @@ recordBtn.addEventListener("click", async () => {
 
   const finishRecording = () => {
     roomChip.onclick = null;
-    roomChip.textContent = `Room: ${room}`;
+    roomChip.textContent = `Room · ${room}`;
     roomChip.style.borderColor = "";
     roomChip.style.color = "";
     roomChip.style.cursor = "";

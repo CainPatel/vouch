@@ -1,4 +1,4 @@
-import { CallerAudioEngine } from "/static/js/audio-engine.js?v=4";
+import { CallerAudioEngine } from "/static/js/audio-engine.js?v=5";
 
 const params = new URLSearchParams(window.location.search);
 const room = (params.get("room") || "DEMO").toUpperCase();
@@ -324,6 +324,23 @@ document.querySelectorAll(".scenario-btn").forEach((btn) => {
       ws.send(JSON.stringify({ type: "caller_text", text: spec.text }));
       btn.classList.remove("playing");
       return;
+    }
+
+    if (audio.micStream) {
+      // Detach live room mic during scripted clip playback so ambient speaker echo never prevents turn end
+      for (const t of audio.micStream.getTracks()) t.stop();
+      audio.micStream = null;
+      if (audio.micSource) {
+        try {
+          audio.micSource.disconnect();
+        } catch (_) {}
+        audio.micSource = null;
+      }
+      if (micStatusBanner) {
+        micStatusBanner.style.borderColor = "";
+        micStatusBanner.style.color = "";
+        micStatusBanner.textContent = "Playing scripted caller clip into Gemini Live...";
+      }
     }
 
     if (!callActive) {

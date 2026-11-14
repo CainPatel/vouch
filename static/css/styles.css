@@ -861,7 +861,7 @@ body.demo-body {
 .qr-card-box {
   background: #ffffff;
   border-radius: 14px;
-  padding: 10px;
+  padding: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -869,9 +869,12 @@ body.demo-body {
 
 .qr-card-box img {
   width: 100%;
-  max-width: 168px;
+  max-width: 176px;
+  aspect-ratio: 1 / 1;
   height: auto;
   display: block;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
 }
 
 .qr-url-link {
@@ -879,6 +882,22 @@ body.demo-body {
   color: var(--accent);
   word-break: break-all;
   text-decoration: none;
+}
+
+.qr-edit-btn {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  cursor: pointer;
+}
+
+.qr-edit-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
 }
 
 /* Bottom Waveforms + Live Captions bar */

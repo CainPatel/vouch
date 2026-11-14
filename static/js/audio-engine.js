@@ -11,6 +11,8 @@ export class CallerAudioEngine {
     this.ctx = null;
     this.micStream = null;
     this.micSource = null;
+    this.micGateGain = null;
+    this.micTailTimer = null;
     this.inputBus = null;
     this.captureNode = null;
     this.callerAnalyser = null;
@@ -168,6 +170,16 @@ export class CallerAudioEngine {
       } catch (_) {}
       this.micSource = null;
     }
+    if (this.micGateGain) {
+      try {
+        this.micGateGain.disconnect();
+      } catch (_) {}
+      this.micGateGain = null;
+    }
+    if (this.micTailTimer) {
+      clearTimeout(this.micTailTimer);
+      this.micTailTimer = null;
+    }
     if (this.ctx) {
       await this.init({ enableMic: true });
     }
@@ -189,7 +201,10 @@ export class CallerAudioEngine {
     if (enableMic && this.micStream && !this.micSource) {
       try {
         this.micSource = this.ctx.createMediaStreamSource(this.micStream);
-        this.micSource.connect(this.inputBus);
+        this.micGateGain = this.ctx.createGain();
+        this.micGateGain.gain.value = 1.0;
+        this.micSource.connect(this.micGateGain);
+        this.micGateGain.connect(this.inputBus);
       } catch (err) {
         console.warn("Could not attach mic source:", err);
       }
@@ -258,6 +273,16 @@ export class CallerAudioEngine {
     const startAt = Math.max(now + 0.015, this.nextPlayTime);
     this.nextPlayTime = startAt + audioBuf.duration;
 
+    // Gate real hardware mic while assistant audio plays out of laptop speakers so speaker output doesn't trigger false barge-in
+    const isFakeMic = (this.activeMicLabel || "").toLowerCase().includes("fake");
+    if (this.micGateGain && !isFakeMic) {
+      if (this.micTailTimer) {
+        clearTimeout(this.micTailTimer);
+        this.micTailTimer = null;
+      }
+      this.micGateGain.gain.setTargetAtTime(0.0, this.ctx.currentTime, 0.01);
+    }
+
     this.scheduledSources.add(src);
     let accounted = false;
     const creditPlayed = (dur) => {
@@ -272,6 +297,14 @@ export class CallerAudioEngine {
     src.onended = () => {
       this.scheduledSources.delete(src);
       creditPlayed(sec);
+      if (this.scheduledSources.size === 0 && this.micGateGain && !isFakeMic) {
+        if (this.micTailTimer) clearTimeout(this.micTailTimer);
+        this.micTailTimer = setTimeout(() => {
+          if (this.scheduledSources.size === 0 && this.micGateGain && this.ctx) {
+            this.micGateGain.gain.setTargetAtTime(1.0, this.ctx.currentTime, 0.015);
+          }
+        }, 160);
+      }
     };
 
     src.start(startAt);
@@ -287,6 +320,13 @@ export class CallerAudioEngine {
     }
     this.scheduledSources.clear();
     this.nextPlayTime = this.ctx ? this.ctx.currentTime : 0;
+    if (this.micTailTimer) {
+      clearTimeout(this.micTailTimer);
+      this.micTailTimer = null;
+    }
+    if (this.micGateGain && this.ctx) {
+      this.micGateGain.gain.setTargetAtTime(1.0, this.ctx.currentTime, 0.01);
+    }
   }
 
   setMuted(muted) {
@@ -395,6 +435,16 @@ export class CallerAudioEngine {
         this.micSource.disconnect();
       } catch (_) {}
       this.micSource = null;
+    }
+    if (this.micGateGain) {
+      try {
+        this.micGateGain.disconnect();
+      } catch (_) {}
+      this.micGateGain = null;
+    }
+    if (this.micTailTimer) {
+      clearTimeout(this.micTailTimer);
+      this.micTailTimer = null;
     }
     if (flushPlayback) {
       this.flushAssistantPlayback();

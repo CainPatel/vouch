@@ -24,3 +24,4 @@ playwright-report/
 # Runtime temp files (Note: artifacts/ is tracked at final submission per SPEC section 10, keep transient tmp separate)
 .tmp/
 *.pid
+static/tunnel.json

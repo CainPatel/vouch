@@ -1,4 +1,4 @@
-.PHONY: install run mock test smoke clips e2e deploy
+.PHONY: install run tunnel mock test smoke clips e2e deploy
 
 PORT ?= 8080
 
@@ -7,6 +7,9 @@ install:
 
 run:
 	uv run uvicorn server.main:app --host 0.0.0.0 --port $(PORT)
+
+tunnel:
+	uv run python scripts/run_tunnel.py
 
 mock:
 	VOUCH_MOCK=1 uv run uvicorn server.main:app --host 0.0.0.0 --port $(PORT)

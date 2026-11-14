@@ -3,8 +3,12 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
+import socket
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 import certifi
 from dotenv import load_dotenv
@@ -30,6 +34,85 @@ def is_mock_mode() -> bool:
 
 def is_test_mode() -> bool:
     return os.getenv("VOUCH_TEST_MODE", "0").strip().lower() in ("1", "true", "yes")
+
+
+def detect_lan_ip() -> str | None:
+    """Detect active Wi-Fi/Ethernet LAN IPv4 address (avoiding local VM bridge interfaces)."""
+    for iface in ("en0", "en1"):
+        try:
+            out = subprocess.check_output(
+                ["ifconfig", iface], text=True, stderr=subprocess.DEVNULL, timeout=1.2
+            )
+            if "status: active" in out or "\tinet " in out:
+                m = re.search(r"\binet\s+(\d+\.\d+\.\d+\.\d+)\b", out)
+                if m and not m.group(1).startswith("127."):
+                    return m.group(1)
+        except Exception:
+            pass
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            if ip and not ip.startswith("127."):
+                return ip
+    except Exception:
+        pass
+    return None
+
+
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "[::1]", "0.0.0.0"}
+_PLACEHOLDER_MARKERS = ("your-cloud-run-url", "your-url.run.app", "<your-cloud-run-url>", "<cloud-run-url>")
+
+
+def _is_placeholder_url(val: str) -> bool:
+    low = val.strip().lower()
+    return any(tok in low for tok in _PLACEHOLDER_MARKERS)
+
+
+def detect_cloudflared_url() -> str | None:
+    """Return active trycloudflare.com HTTPS URL when local cloudflared tunnel is running."""
+    log_path = ROOT_DIR / ".tmp" / "cloudflared.log"
+    if not log_path.exists():
+        return None
+    try:
+        with socket.create_connection(("127.0.0.1", 20241), timeout=0.08):
+            pass
+    except OSError:
+        return None
+    try:
+        text = log_path.read_text(encoding="utf-8", errors="ignore")
+        matches = re.findall(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com\b", text)
+        if matches:
+            return matches[-1]
+    except Exception:
+        pass
+    return None
+
+
+def resolve_public_origin(host_header: str | None = None, scheme: str = "http") -> str:
+    """Return a phone-reachable origin (never localhost when a tunnel, LAN IP, or VOUCH_PUBLIC_URL exists)."""
+    override = os.getenv("VOUCH_PUBLIC_URL", "").strip().rstrip("/")
+    if override and not _is_placeholder_url(override):
+        return override
+
+    host_raw = (host_header or "localhost:8080").split(",")[0].strip()
+    parsed = urlparse(f"{scheme}://{host_raw}")
+    hostname = (parsed.hostname or "localhost").lower()
+    port = parsed.port
+
+    if hostname not in _LOCAL_HOSTS and not _is_placeholder_url(hostname):
+        return f"{scheme}://{host_raw}"
+
+    cf_url = detect_cloudflared_url()
+    if cf_url:
+        return cf_url
+
+    lan_ip = detect_lan_ip()
+    if lan_ip:
+        port_suffix = f":{port}" if port and port not in (80, 443) else ""
+        return f"{scheme}://{lan_ip}{port_suffix}"
+
+    return f"{scheme}://{host_raw}"
 
 
 def load_contacts() -> dict:

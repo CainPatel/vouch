@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vouch · Live Demo View</title>
-  <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="stylesheet" href="/static/css/styles.css?v=5" />
 </head>
 <body class="demo-body">
   <header class="demo-header">
@@ -45,6 +45,7 @@
           <img id="qrImage" alt="QR code for Jake's family verification page" />
         </div>
         <a id="qrLink" class="qr-url-link" target="_blank" rel="noopener"></a>
+        <button type="button" id="qrEditBtn" class="qr-edit-btn">Set public/LAN URL</button>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); padding-top: 10px;">
@@ -85,6 +86,6 @@
 
   <div class="countdown-overlay hidden" id="countdownOverlay">3</div>
 
-  <script type="module" src="/static/js/demo.js?v=4"></script>
+  <script type="module" src="/static/js/demo.js?v=5"></script>
 </body>
 </html>

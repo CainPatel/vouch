@@ -115,6 +115,24 @@ def test_pages_and_room_isolation_in_mock_mode(monkeypatch):
         qr_resp = client.get("/api/qr?url=https://example.com/family?room=ISOA")
         assert qr_resp.status_code == 200
         assert "<svg" in qr_resp.text
+        assert "viewBox=" in qr_resp.text
+
+        monkeypatch.setenv("VOUCH_PUBLIC_URL", "https://vouch-demo.example.com")
+        health_resp = client.get("/api/health", headers={"host": "localhost:8080"})
+        assert health_resp.status_code == 200
+        assert health_resp.json()["public_origin"] == "https://vouch-demo.example.com"
+        qr_local_resp = client.get(
+            "/api/qr?url=http://localhost:8080/family?room=ISOA",
+            headers={"host": "localhost:8080"},
+        )
+        assert qr_local_resp.status_code == 200
+        assert qr_local_resp.text != client.get(
+            "/api/qr?url=https://other.example.com/family?room=ISOA"
+        ).text
+        assert qr_local_resp.text == client.get(
+            "/api/qr?url=https://vouch-demo.example.com/family?room=ISOA"
+        ).text
+        monkeypatch.delenv("VOUCH_PUBLIC_URL", raising=False)
 
         with (
             client.websocket_connect("/ws?room=ISOA&role=caller") as caller_a,
