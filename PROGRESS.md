@@ -334,3 +334,18 @@
 - **Listen-by-Proxy Audit (`artifacts/*_transcript.txt` + all `/demo` & mobile screenshots):**
   - 13/13 transcripts are word-for-word clean (39/39 consecutive clean transcripts across Convergence Checks 1–3) and zero visible problems exist on any page or call state.
 - **Stop Condition Reached:** Three iterations in a row (`Iterations 17, 18, 19`) produced no measurable improvement over prior floor bests (`10/10`, `3/3`, `0.611s` tap->voice, `1.542s` speech->voice) and no visible problem can be named. Freezing application code and entering Milestone M7.
+
+## 2026-11-14 03:21–03:29 PST — Milestone M7: Code Freeze, Final Suite, Deliverables & `submission` Tag
+- Re-read `SPEC.md` sections 1, 2, 8, and 10 and the last 30 lines of `PROGRESS.md`.
+- Application code frozen at `m6-complete` (`0db7f83`).
+- Executed full verification suite on frozen build:
+  - `make test` (`uv run pytest -q`): **7 / 7 passed** (unit state machine, timeout, room isolation, rate limit, split ASR tag stripping + Chromium fake-mic hero E2E).
+  - `make smoke` (`scripts/audio_smoke.py`): **PASS** (`gemini-3.8-live` + `gemini-4-carbon`, `tap_to_first_audio_s = 0.538s`).
+  - `docker build -t vouch:local .`: built cleanly, verified `test ! -f /app/.env`, ran container locally and passed `tests/test_hero_e2e.py` against container (`1 passed in 15.25s`).
+  - Final frozen 10-run + 3-scenario evaluation (`scripts/run_eval.py --runs 10 --scenarios --screenshots`):
+    - **Hero pass rate:** **10 / 10 (100%)**
+    - **Scripted scenarios:** **3 / 3 (100%)** (`grandson`, `bank`, `pharmacy`)
+    - **Median `"Not me"` tap -> first assistant audio:** **0.594s** (range `0.511s – 0.894s`)
+    - **Median end of caller speech -> first assistant audio:** **1.646s** (range `1.427s – 2.170s`)
+- Verified all `SPEC.md` section 10 & 10b deliverables: `MORNING.md`, `README.md`, `DEMO_SCRIPT.md`, `PITCH_SCRIPT.md`, `ONE_PAGER_IDEA.txt`, `ONE_PAGER_TEAM.txt`, `PROGRESS.md`, `BLOCKED.md`, `artifacts/demo_auto.mp4` (`19.60s`), `artifacts/call_*` audio & transcripts, and `artifacts/screenshots/*.png` across every page and call state.
+- Audited repository and git history for secrets (`.env` untracked, zero API keys in files or history) and tagged final commit `submission`.

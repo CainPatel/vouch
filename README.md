@@ -78,6 +78,19 @@ Models are discovered dynamically at startup against `GEMINI_API_KEY` (and can b
 
 ---
 
+## Verified Latency & Reliability (Frozen M7 Benchmark)
+
+Measured end-to-end through Chromium's real `AudioWorklet` -> FastAPI WebSocket -> `gemini-3.8-live` bidirectional audio pipeline (`scripts/run_eval.py`):
+
+| Metric | Result |
+|---|---|
+| **10-run consecutive fake-mic hero pass rate** | **10 / 10 (100%)** |
+| **Median `"Not me"` tap -> first assistant audio** | **0.594s** *(target `< 1.5s`)* |
+| **Median end of caller speech -> first assistant audio** | **1.646s** |
+| **Scripted caller scenarios passing (`grandson`, `bank`, `pharmacy`)** | **3 / 3 (100%)** |
+
+---
+
 ## Testing & Verification
 
 ```bash
