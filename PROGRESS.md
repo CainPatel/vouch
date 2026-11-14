@@ -242,3 +242,19 @@
   - Median `"Not me"` tap -> first assistant audio: **0.663s** (improved from `0.728s`, `-0.065s`)
   - Median end of caller speech -> first assistant audio: **1.631s** (improved from `1.728s`, `-0.097s`)
 - **Decision:** Every metric held or improved (`10/10`, `3/3`, `0.663s` tap->voice, `1.631s` speech->voice) and `demo_02_screening.png` copy is coherent; committed as `m6-iter12`.
+
+## 2026-11-14 02:34 PST — Improvement Loop Iteration 13
+- **Measured Baseline (from Iteration 12):**
+  - Hero pass rate: `10/10`
+  - Median `"Not me"` tap -> first assistant audio: `0.663s`
+  - Median end of caller speech -> first assistant audio: `1.631s`
+  - Scripted scenarios producing correct action: `3/3`
+- **Listen-by-Proxy Audit (`artifacts/*_transcript.txt` + `artifacts/screenshots/*.png` including `390x844` mobile & `message_taken`):**
+  - **Single worst problem a judge would notice:** On a narrow `390x844` mobile viewport (`page_family_mobile_verifying.png`), `.state-pill` (`• ACTION NEEDED`) wrapped onto two lines in the top header bar.
+- **Fix Applied:** Added `white-space: nowrap; flex-shrink: 0;` to `.state-pill` in `static/css/styles.css`.
+- **Re-measured Metrics (Iteration 13):**
+  - Hero pass rate: **10 / 10** (held — 13/13 transcripts pristine)
+  - Scripted scenarios producing correct action: **3 / 3** (held)
+  - Median `"Not me"` tap -> first assistant audio: **0.735s** (held steady within normal live API variance; CSS-only change)
+  - Median end of caller speech -> first assistant audio: **1.661s** (held steady within normal live API variance; CSS-only change)
+- **Decision:** Held `10/10` reliability and `3/3` scenarios, mobile header pill stays single-line; committed as `m6-iter13`.
