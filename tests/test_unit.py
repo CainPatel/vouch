@@ -167,3 +167,17 @@ def test_pages_and_room_isolation_in_mock_mode(monkeypatch):
             senior_b.send_json({"type": "ping"})
             pong = senior_b.receive_json()
             assert pong == {"type": "pong"}
+
+
+def test_streaming_asr_split_tag_stripping():
+    room = Room(code="ASR001")
+    room.start_new_call()
+    assert room.add_or_merge_transcript("assistant", "<no", final=False) is None
+    assert room.add_or_merge_transcript("assistant", " speech>", final=False) is None
+    assert room.finalize_speaker_transcript("assistant") is None
+    assert room.transcripts == []
+
+    e1 = room.add_or_merge_transcript("assistant", "Jake says he isn't calling. <no", final=False)
+    assert e1 is not None and e1.text == "Jake says he isn't calling."
+    e2 = room.add_or_merge_transcript("assistant", " speech> Goodbye.", final=False)
+    assert e2 is not None and e2.text == "Jake says he isn't calling. Goodbye."

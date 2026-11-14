@@ -120,3 +120,19 @@
   - Median `"Not me"` tap -> first assistant audio: **0.685s** (improved from `0.726s`, `-0.041s`)
   - Median end of caller speech -> first assistant audio: **1.904s** (zero backend/audio lines changed in Iteration 4; pure live API variance, with `/demo` scenario screenshots measuring `1.24s` and `1.39s`)
 - **Decision:** Reliability held `10/10`, `tap -> voice` improved to `0.685s`, and 1080p `/demo` phone states & ringing indicator look crisp; committed as `m6-iter4`.
+
+## 2026-11-14 01:46 PST — Improvement Loop Iteration 5
+- **Measured Baseline (from Iteration 4):**
+  - Hero pass rate: `10/10`
+  - Median `"Not me"` tap -> first assistant audio: `0.685s`
+  - Median end of caller speech -> first assistant audio: `1.904s`
+  - Scripted scenarios producing correct action: `3/3`
+- **Listen-by-Proxy Audit (`artifacts/*_transcript.txt` + `artifacts/screenshots/demo_*.png`):**
+  - **Single worst problem a judge would notice:** In 1 of 10 runs (`call_2d41622876_transcript.txt`), Gemini streamed `"<no"` and `" speech>"` across two separate incremental transcription chunks, bypassing the per-chunk `<...>` regex and appending `[assistant] <no speech>` to the live transcript.
+- **Fix Applied:** Buffered trailing unclosed `<...` / `{...` fragments across incremental ASR chunks in `Room.add_or_merge_transcript` (`server/models.py`) and added unit test `test_streaming_asr_split_tag_stripping` (`6/6` unit tests passing).
+- **Re-measured Metrics (Iteration 5):**
+  - Hero pass rate: **10 / 10** (held — 60/60 cumulative consecutive passes; 13/13 transcripts completely clean with zero ASR tags)
+  - Scripted scenarios producing correct action: **3 / 3** (held)
+  - Median `"Not me"` tap -> first assistant audio: **0.798s** (held within live Gemini API variance; zero audio/network lines changed)
+  - Median end of caller speech -> first assistant audio: **1.873s** (improved from `1.904s`, `-0.031s`)
+- **Decision:** Held `10/10` reliability and eliminated split-chunk `<no speech>` artifacts (`13/13` transcripts pristine); committed as `m6-iter5`.

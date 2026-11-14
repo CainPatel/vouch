@@ -169,6 +169,7 @@ class Room:
     last_report: dict[str, Any] | None = None
     history: list[CallHistoryItem] = field(default_factory=list)
     metrics: LatencyMetrics = field(default_factory=LatencyMetrics)
+    _pending_asr_tag: dict[str, str] = field(default_factory=dict)
 
     def touch(self) -> None:
         self.last_active_at = time.time()
@@ -201,14 +202,27 @@ class Room:
         self.last_verdict = None
         self.last_report = None
         self.metrics = LatencyMetrics(call_started_at=self.call_started_at)
+        self._pending_asr_tag.clear()
         return call_id
+
+    @staticmethod
+    def _strip_asr_tags(s: str) -> str:
+        return re.sub(r"<[^>]{1,40}>|\{[^{}]{1,40}\}", "", s)
 
     def add_or_merge_transcript(
         self, speaker: str, text: str, final: bool = True
     ) -> TranscriptEntry | None:
-        # Strip Gemini ASR non-speech control tags like <no speech> or {pause}
-        text = re.sub(r"<[^>]{1,32}>|\{[^{}]{1,32}\}", "", text)
-        cleaned = text.strip() if final else text
+        carry = self._pending_asr_tag.pop(speaker, "")
+        combined = f"{carry}{text}"
+        combined = self._strip_asr_tags(combined)
+        if not final:
+            # Hold back any trailing unclosed '<...' or '{...' tag fragment until next chunk
+            m = re.search(r"(<[^>]{0,39}|\{[^{}]{0,39})$", combined)
+            if m:
+                self._pending_asr_tag[speaker] = m.group(1)
+                combined = combined[: m.start()]
+
+        cleaned = combined.strip() if final else combined
         if not cleaned or not cleaned.strip() or cleaned.strip() in ("-", "—", "..."):
             return None
         self.touch()
@@ -220,23 +234,32 @@ class Room:
         ):
             prev = self.transcripts[-1]
             # Append with smart spacing for streaming ASR tokens
-            if prev.text and not prev.text.endswith(" ") and not text.startswith((" ", ".", ",", "?", "!", "'", "’")):
-                prev.text = f"{prev.text} {text.lstrip()}"
+            if prev.text and not prev.text.endswith(" ") and not combined.startswith((" ", ".", ",", "?", "!", "'", "’")):
+                prev.text = f"{prev.text} {combined.lstrip()}"
             else:
-                prev.text = f"{prev.text}{text}"
+                prev.text = f"{prev.text}{combined}"
+            prev.text = self._strip_asr_tags(prev.text).strip() if final else self._strip_asr_tags(prev.text)
             prev.final = final
             prev.ts = time.time()
+            if not prev.text.strip():
+                self.transcripts.pop()
+                return None
             return prev
         entry = TranscriptEntry(speaker=speaker, text=cleaned.strip(), final=final)
         self.transcripts.append(entry)
         return entry
 
     def finalize_speaker_transcript(self, speaker: str) -> TranscriptEntry | None:
+        self._pending_asr_tag.pop(speaker, None)
         if (
             self.transcripts
             and self.transcripts[-1].speaker == speaker
             and not self.transcripts[-1].final
         ):
+            self.transcripts[-1].text = self._strip_asr_tags(self.transcripts[-1].text).strip()
+            if not self.transcripts[-1].text:
+                self.transcripts.pop()
+                return None
             self.transcripts[-1].final = True
             return self.transcripts[-1]
         return None
