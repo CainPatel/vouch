@@ -277,7 +277,8 @@ class RoomSessionController:
         ver.answer = answer
         ver.answered_at = now
         self.room.metrics.verification_tapped_at = now
-        self._awaiting_post_tap_audio = True
+        if is_mock_mode():
+            self._awaiting_post_tap_audio = True
 
         await self.hub.broadcast_json(
             self.room.code,

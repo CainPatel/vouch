@@ -355,22 +355,32 @@ class GeminiLiveScreenerSession:
 
         self._verification_outcome = answer
         if answer == "denied":
+            await self.controller.tool_block_call(
+                reason=f"Someone impersonating {claimed_name} asked for {amount or ask}",
+                scam_type="family_impersonation",
+            )
             prompt = (
-                f"[VERIFICATION RESULT: {claimed_name} tapped 'Not me' on their phone — this caller is an impersonator. "
-                f"Call block_call(reason='Someone impersonating {claimed_name} asked for {amount or ask}', scam_type='family_impersonation') "
-                f"and say out loud right now in one calm sentence: '{claimed_name} says he isn't calling. Goodbye.']"
+                f"[System update: {claimed_name} tapped Not me on their phone and the call is now marked blocked. "
+                f"Do not call any tools. Reply to the caller out loud right now with only these exact words: "
+                f"{claimed_name} says he isn't calling. Goodbye.]"
             )
         elif answer == "confirmed":
+            await self.controller.tool_pass_through(
+                summary=f"Verified call from {claimed_name} ({relationship})"
+            )
             prompt = (
-                f"[VERIFICATION RESULT: {claimed_name} tapped 'Yes, that's me'. "
-                f"Call pass_through(summary='Verified call from {claimed_name} ({relationship})') "
-                f"and say out loud: 'Confirmed — connecting you to Ruth now.']"
+                f"[System update: {claimed_name} tapped Yes on their phone and the call is connecting. "
+                f"Do not call any tools. Reply to the caller out loud right now with only these words: "
+                f"Confirmed — connecting you with Ruth right now.]"
             )
         else:
+            await self.controller.tool_take_message(
+                summary=f"Unverified caller claiming to be {claimed_name}"
+            )
             prompt = (
-                f"[VERIFICATION RESULT: Verification timed out with no answer from {claimed_name}. "
-                f"Call take_message(summary='Unverified caller claiming to be {claimed_name}') "
-                f"and say out loud: 'I couldn't confirm that right now. I'll let Ruth know you called.']"
+                f"[System update: Verification timed out with no answer from {claimed_name} and a message was logged. "
+                f"Do not call any tools. Reply to the caller out loud right now with only these words: "
+                f"I couldn't confirm that right now. I'll let Ruth know you called.]"
             )
 
         try:
@@ -378,6 +388,7 @@ class GeminiLiveScreenerSession:
                 turns=[{"role": "user", "parts": [{"text": prompt}]}],
                 turn_complete=True,
             )
+            self.controller._awaiting_post_tap_audio = True
         except Exception as exc:
             logger.warning("Failed to inject verification result turn: %s", exc)
 
@@ -427,18 +438,14 @@ class GeminiLiveScreenerSession:
             elif name == "block_call":
                 reason = str(args.get("reason") or "Suspicious call blocked")
                 scam_type = str(args.get("scam_type") or "impersonation")
-                await self.controller.tool_block_call(reason=reason, scam_type=scam_type)
+                if self.controller._terminal_outcome is None:
+                    await self.controller.tool_block_call(reason=reason, scam_type=scam_type)
                 self._pending_hangup = True
-                already_spoke = (
-                    self._post_tap_audio_bytes >= 12000
-                    if self._verification_outcome is not None
-                    else self._turn_audio_bytes >= 12000
-                )
-                if already_spoke:
+                if self._verification_outcome is not None:
+                    instr = "Already recorded. Do not repeat anything you already said."
+                elif self._turn_audio_bytes >= 12000:
                     instr = "Call marked blocked. Do not add anything further."
                     self._spawn(self.controller.finish_call_after_speech(delay_s=2.4))
-                elif self._verification_outcome == "denied":
-                    instr = f"Call marked blocked. Now speak out loud to the caller: '{self._verified_name or 'Jake'} says he isn't calling. Goodbye.'"
                 else:
                     instr = (
                         "Call marked blocked. Now tell the caller calmly in one sentence: "

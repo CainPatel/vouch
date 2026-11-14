@@ -72,3 +72,19 @@
   - Median `"Not me"` tap -> first assistant audio: **0.905s** (within normal live Gemini API variance of M4's `0.535s–1.372s` range; well below `1.5s` target)
   - Median end of caller speech -> first assistant audio: **1.797s** (within normal live Gemini API variance of M4's `1.466s–2.298s` range)
 - **Decision:** Held `10/10` reliability and fixed silent pass-through hangup (`2/3 -> 3/3` spoken scenarios); committed as `m6-iter1`.
+
+## 2026-11-14 01:16 PST — Improvement Loop Iteration 2
+- **Measured Baseline (from Iteration 1):**
+  - Hero pass rate: `10/10`
+  - Median `"Not me"` tap -> first assistant audio: `0.905s`
+  - Median end of caller speech -> first assistant audio: `1.797s`
+  - Scripted scenarios producing correct action: `3/3`
+- **Listen-by-Proxy Audit (`artifacts/*_transcript.txt` + `artifacts/screenshots/demo_*.png`):**
+  - **Single worst problem a judge would notice:** In `call_d9bb7f5ee7_transcript.txt`, the post-tap denial sentence repeated twice with a leaked prefix (`fungal speak: "Jake says he isn't calling. Goodbye."Jake says he isn't calling. Goodbye.`), and `tap -> voice` spent ~0.3s waiting on a redundant post-tap `block_call` round-trip whose `FunctionResponse` re-prompted Gemini to speak while speech had already started.
+- **Fix Applied:** Record the authoritative family verification verdict on `RoomSessionController` immediately when `/family` answers, send a single tool-free spoken client turn for the post-tap sentence, and suppress duplicate speech instructions in `block_call` when `_verification_outcome` is already resolved.
+- **Re-measured Metrics (Iteration 2):**
+  - Hero pass rate: **10 / 10** (held — and 11/11 grandson transcripts matched the exact target lines word-for-word with zero repeats)
+  - Scripted scenarios producing correct action: **3 / 3** (held)
+  - Median `"Not me"` tap -> first assistant audio: **0.758s** (improved from `0.905s`, `-0.147s`, and faster than M4 `0.782s`)
+  - Median end of caller speech -> first assistant audio: **1.584s** (improved from `1.797s`, `-0.213s`, and faster than M4 `1.725s`)
+- **Decision:** Every metric held or improved; committed as `m6-iter2`.
