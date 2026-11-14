@@ -1,0 +1,36 @@
+VOUCH — IDEA ONE-PAGER
+
+PROBLEM
+Impersonation scams ("Grandma, it's Jake, I'm in jail and need $4,000 for bail — please don't tell Mom" or fake bank fraud departments demanding urgent transfers to a "safe account") devastate older adults and their families. Cheap AI voice synthesis and number spoofing have broken traditional caller-ID spam filters: scammers rotate clean local numbers on every attempt, and once an older adult hears a panicked voice on the line, urgency and secrecy pressure take over before family members know anything happened.
+
+Primary public data underscores the scale and severity:
+- Federal Trade Commission (FTC, August 2025 Consumer Protection Data Spotlight): Combined reported losses from older adults (60+) who lost over $100,000 to business and government impersonators increased eightfold from $55 million in 2020 to $445 million in 2024, while reports of losses of $10,000+ more than quadrupled. Source: https://www.ftc.gov/news-events/news/press-releases/2025/08/ftc-data-show-more-four-fold-increase-reports-impersonation-scammers-stealing-tens-even-hundreds
+- FBI Internet Crime Complaint Center (IC3 Elder Fraud Reports): Victims aged 60 and older filed over 147,000 complaints totaling $4.88 billion in reported losses in 2024 (rising further in subsequent annual IC3 reporting). Source: https://www.fbi.gov/contact-us/field-offices/littlerock/news/fbi-recognizes-elder-abuse-awareness-day-and-warns-americans-of-elder-fraud
+
+SOLUTION
+Vouch is a real-time AI call screener for older adults that defeats impersonation scams by verifying identity claims out-of-band before the senior's phone ever rings. Rather than trying to detect synthetic audio artifacts (an arms race scammers eventually win), Vouch checks intent directly with the real person or blocks unverified institutional demands outright.
+
+HOW IT WORKS
+1. Known contacts ring the senior ("Ruth") normally. Calls from unknown numbers are answered silently by Vouch, which always announces itself as Ruth's assistant.
+2. Ordinary routine callers (such as Elm Street Pharmacy calling about a prescription pickup or a doctor's office confirming an appointment) are passed straight through to Ruth with a clear one-line summary.
+3. Institutional claims (anyone claiming to be a bank fraud department, IRS, Social Security, Medicare, or tech support) are never connected; Vouch politely ends the call and lets Ruth call the official number printed on her card or statement if needed.
+4. Family identity claims trigger live out-of-band verification: when a caller claims to be Ruth's grandson Jake asking for $4,000 bail, Vouch places the caller on hold ("One moment while I confirm with Jake") and pushes an instant verification card to the real Jake's phone. When Jake taps "Not me", Vouch tells the caller "Jake says he isn't calling. Goodbye," disconnects, logs the blocked attempt on Ruth's phone, and generates a plain-English security brief for the family.
+What is simulated in this hackathon prototype: the PSTN/telephony carrier leg is simulated in browser phone frames over WebSockets; the two-way voice conversation, tool execution, second-device verification, and post-call analysis are 100% live audio and real Gemini model calls.
+
+GOOGLE TOOLS & GEMINI MODELS USED
+- Gemini Live API (`gemini-3.8-live` via the official `google-genai` Python SDK): Handles low-latency bidirectional 16 kHz PCM audio input and 24 kHz native audio output, real-time input/output speech transcription, voice activity detection, and live tool calling (`request_family_verification`, `block_call`, `pass_through`, `take_message`) with sub-second response after family verification.
+- Gemini 4 Carbon (`gemini-4-carbon`): Runs asynchronously right after call completion to analyze the full call transcript and verification telemetry, producing a structured post-call family security report (what was claimed, which social-engineering pattern it matches, what Vouch did, and one concrete recommended next step).
+- Gemini Text-to-Speech (`gemini-3.8-flash-tts`): Generates stock-voice scripted caller test clips for reproducible automated browser audio testing and one-click live demo scenarios.
+- Google AI Studio: API key provisioning and model capability discovery.
+- Antigravity CLI: Used to build, test, and verify the end-to-end application.
+- Google Cloud Run: Hosts the containerized FastAPI + WebSocket real-time audio server at a public HTTPS endpoint with session affinity.
+
+MARKET & BUSINESS MODEL
+- Direct-to-Family Consumer Plan ($12/month): Purchased by adult children caring for aging parents. Works via standard carrier conditional call forwarding for unknown numbers — no new hardware and zero daily friction for the older adult.
+- B2B2C Institutional Sponsorship (per-member-per-month): Retail banks, credit unions, wireless carriers, and Medicare Advantage plans distribute Vouch to older members to prevent high-dollar authorized-push-payment wire fraud, elder financial exploitation, and support costs.
+
+EXPANSION ROADMAP
+1. Omnichannel Scam Triage: Extend out-of-band family verification to suspicious SMS texts, WhatsApp messages, and urgent emails forwarded to Vouch.
+2. Payment-Moment Protection: Pair Vouch with bank/card alerts so unusual wire, gift-card, or crypto-ATM transactions trigger a calm family co-check before funds leave.
+3. Trusted Everyday Voice Assistant for Seniors: Help older adults schedule rides, summarize legitimate clinic reminders, and request trusted callbacks safely.
+4. SMB Executive Deepfake Defense: Bring the same zero-trust out-of-band voice verification loop to small businesses targeted by CFO/vendor wire-transfer impersonation calls.
