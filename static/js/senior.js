@@ -7,6 +7,7 @@ if (params.get("embed") === "1") {
 const statePill = document.getElementById("statePill");
 const stateText = document.getElementById("stateText");
 const statusCard = document.getElementById("statusCard");
+const ringIndicator = document.getElementById("ringIndicator");
 const statusKicker = document.getElementById("statusKicker");
 const statusHeadline = document.getElementById("statusHeadline");
 const statusSub = document.getElementById("statusSub");
@@ -31,6 +32,9 @@ function updatePill(state) {
 
 function showStatusCard(variant, kicker, headline, sub) {
   statusCard.className = `hero-status-card ${variant}`;
+  if (ringIndicator) {
+    ringIndicator.classList.toggle("hidden", variant !== "passed");
+  }
   statusKicker.textContent = kicker;
   statusHeadline.textContent = headline;
   statusSub.textContent = sub;
@@ -117,6 +121,14 @@ function escapeHtml(str) {
 function applyVerdictCard(verdict) {
   if (!verdict) return;
   stickyVerdict = verdict;
+  const histHeadline =
+    verdict.outcome === "passed"
+      ? `Passed through: ${verdict.summary || verdict.headline}`
+      : verdict.headline;
+  if (!historyItems.some((h) => h.headline === histHeadline)) {
+    historyItems = [{ outcome: verdict.outcome, headline: histHeadline }, ...historyItems].slice(0, 10);
+    renderHistory();
+  }
   if (verdict.outcome === "blocked") {
     showStatusCard(
       "blocked",

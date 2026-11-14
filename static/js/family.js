@@ -152,6 +152,14 @@ function connectWs() {
       }
     } else if (msg.type === "verification_answered") {
       showAnswered(msg.answer);
+    } else if (msg.type === "call_blocked") {
+      if (!currentVerificationId) {
+        setPill("blocked", "scam blocked");
+      }
+    } else if (msg.type === "call_passed_through" || msg.type === "call_ended") {
+      if (!currentVerificationId) {
+        setPill("", "standby");
+      }
     } else if (msg.type === "family_report") {
       renderReport(msg);
     }

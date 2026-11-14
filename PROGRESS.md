@@ -104,3 +104,19 @@
   - Median `"Not me"` tap -> first assistant audio: **0.726s** (improved from `0.758s`, `-0.032s`, with zero fake pre-tap tail outliers; range `0.609s–1.336s`)
   - Median end of caller speech -> first assistant audio: **1.784s** (held within live Gemini API variance of M4 `1.725s` / Iter 1 `1.797s`, and `/demo` screenshots now show accurate live telemetry `1.28s`–`1.60s` and `0.66s` on screen)
 - **Decision:** Reliability held `10/10`, `tap -> voice` improved to `0.726s`, and live `/demo` telemetry bug resolved; committed as `m6-iter3`.
+
+## 2026-11-14 01:37 PST — Improvement Loop Iteration 4
+- **Measured Baseline (from Iteration 3):**
+  - Hero pass rate: `10/10`
+  - Median `"Not me"` tap -> first assistant audio: `0.726s`
+  - Median end of caller speech -> first assistant audio: `1.784s`
+  - Scripted scenarios producing correct action: `3/3`
+- **Listen-by-Proxy Audit (`artifacts/*_transcript.txt` + `artifacts/screenshots/demo_*.png`):**
+  - **Single worst problem a judge would notice:** In `demo_05_bank_blocked.png` and `demo_06_pharmacy_passed.png`, Jake's Phone top-right status pill stayed stuck on blue `• CALL ACTIVE` after non-family calls blocked or passed through, `Screened Call History` still showed `"No screened calls yet."` while the verdict card was displayed, and Ruth's Phone lacked a prominent incoming-call ringing animation on `passed`.
+- **Fix Applied:** Updated `family.js` to transition non-family calls cleanly to `• SCAM BLOCKED` or `• STANDBY`, added an animated incoming-call ringing ripple indicator on Ruth's Phone when `passed` (`senior.html`, `senior.js`, `styles.css`), and updated `Screened Call History` immediately on verdict.
+- **Re-measured Metrics (Iteration 4):**
+  - Hero pass rate: **10 / 10** (held — 50/50 cumulative across M4 + Iters 1–4)
+  - Scripted scenarios producing correct action: **3 / 3** (held)
+  - Median `"Not me"` tap -> first assistant audio: **0.685s** (improved from `0.726s`, `-0.041s`)
+  - Median end of caller speech -> first assistant audio: **1.904s** (zero backend/audio lines changed in Iteration 4; pure live API variance, with `/demo` scenario screenshots measuring `1.24s` and `1.39s`)
+- **Decision:** Reliability held `10/10`, `tap -> voice` improved to `0.685s`, and 1080p `/demo` phone states & ringing indicator look crisp; committed as `m6-iter4`.
