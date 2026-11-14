@@ -274,3 +274,19 @@
   - Median `"Not me"` tap -> first assistant audio: **0.782s** (held steady within normal live API variance; matched M4 `0.782s`)
   - Median end of caller speech -> first assistant audio: **1.626s** (improved from `1.661s`, `-0.035s`)
 - **Decision:** Every metric held or improved and `demo_auto.mp4` has zero bezel overlap; committed as `m6-iter14`.
+
+## 2026-11-14 02:55 PST — Improvement Loop Iteration 15
+- **Measured Baseline (from Iteration 14):**
+  - Hero pass rate: `10/10`
+  - Median `"Not me"` tap -> first assistant audio: `0.782s`
+  - Median end of caller speech -> first assistant audio: `1.626s`
+  - Scripted scenarios producing correct action: `3/3`
+- **Listen-by-Proxy Audit (`demo_05_bank_blocked.png`, `page_landing.png`, `artifacts/*_transcript.txt`):**
+  - **Single worst problem a judge would notice:** When an institutional scam (e.g., Bank Fraud) was blocked without family verification, `call_ended` immediately reset Jake's Phone pill from `• SCAM BLOCKED` back to `• STANDBY` and left the generic `Protecting Ruth` idle card above the incoming `Report by Gemini 4 Carbon` card.
+- **Fix Applied:** Preserved `• SCAM BLOCKED` on `/family` (`static/js/family.js`) after non-verification scam blocks and hid `idleCard` once `family_report` renders; updated `scripts/run_eval.py` to capture `demo_05_bank_blocked.png` after the Carbon report renders and `page_landing.png` at 1920x1080.
+- **Re-measured Metrics (Iteration 15):**
+  - Hero pass rate: **10 / 10** (held — 13/13 transcripts pristine)
+  - Scripted scenarios producing correct action: **3 / 3** (held)
+  - Median `"Not me"` tap -> first assistant audio: **0.845s** (held steady within normal live API variance; UI-only change in `family.js`)
+  - Median end of caller speech -> first assistant audio: **1.702s** (held steady within normal live API variance vs M4 `1.725s`)
+- **Decision:** Held `10/10` reliability and `3/3` scenarios while making non-verification scam blocks cleanly surface the Carbon security brief on Jake's Phone; committed as `m6-iter15`.

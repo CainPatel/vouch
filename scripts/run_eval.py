@@ -146,6 +146,11 @@ def run_three_scenarios(base_url: str, take_screenshots: bool = False) -> dict[s
                 break
             page2.wait_for_timeout(250)
         if take_screenshots:
+            rep_deadline2 = time.time() + 12.0
+            while time.time() < rep_deadline2:
+                if senior_f2.get_by_test_id("senior-carbon-report").is_visible():
+                    break
+                page2.wait_for_timeout(300)
             page2.screenshot(path=str(screenshots_dir / "demo_05_bank_blocked.png"))
         ctx2.close()
 
@@ -176,13 +181,19 @@ def run_three_scenarios(base_url: str, take_screenshots: bool = False) -> dict[s
             page3.screenshot(path=str(screenshots_dir / "demo_06_pharmacy_passed.png"))
         ctx3.close()
 
-        # Also capture standalone mobile viewports if requested
+        # Also capture desktop landing + standalone mobile viewports if requested
         if take_screenshots:
-            parsed = urlparse(page.url if not page.is_closed() else f"{base_url}/demo?room=SNAP01")
+            lctx = browser.new_context(viewport={"width": 1920, "height": 1080})
+            lp = lctx.new_page()
+            lp.goto(f"{base_url}/", wait_until="networkidle")
+            lp.wait_for_timeout(300)
+            lp.screenshot(path=str(screenshots_dir / "page_landing.png"))
+            lctx.close()
+
             mctx = browser.new_context(viewport={"width": 390, "height": 844})
             mp = mctx.new_page()
             for name, route in [
-                ("landing", "/"),
+                ("landing_mobile", "/"),
                 ("caller_mobile", "/caller?room=SNAP01"),
                 ("senior_mobile", "/senior?room=SNAP01"),
                 ("family_mobile", "/family?room=SNAP01"),

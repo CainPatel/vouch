@@ -27,6 +27,7 @@ const carbonNext = document.getElementById("carbonNext");
 
 let ws = null;
 let currentVerificationId = null;
+let lastNonVerifyBlocked = false;
 
 function setPill(cls, label) {
   statePill.className = `state-pill ${cls}`;
@@ -136,14 +137,21 @@ function connectWs() {
       }
       if (msg.last_report) {
         renderReport(msg.last_report);
+        if (!msg.verification && msg.last_report.outcome === "blocked") {
+          lastNonVerifyBlocked = true;
+          setPill("blocked", "scam blocked");
+          idleCard.classList.add("hidden");
+        }
       }
     } else if (msg.type === "call_started") {
       currentVerificationId = null;
+      lastNonVerifyBlocked = false;
       carbonCard.classList.add("hidden");
       verifyCard.classList.add("hidden");
       idleCard.classList.remove("hidden");
       setPill("screening", "call active");
     } else if (msg.type === "verification_requested") {
+      lastNonVerifyBlocked = false;
       showVerification(msg);
       if (navigator.vibrate) {
         try {
@@ -154,14 +162,23 @@ function connectWs() {
       showAnswered(msg.answer);
     } else if (msg.type === "call_blocked") {
       if (!currentVerificationId) {
+        lastNonVerifyBlocked = true;
         setPill("blocked", "scam blocked");
       }
-    } else if (msg.type === "call_passed_through" || msg.type === "call_ended") {
+    } else if (msg.type === "call_passed_through") {
+      lastNonVerifyBlocked = false;
       if (!currentVerificationId) {
+        setPill("", "standby");
+      }
+    } else if (msg.type === "call_ended") {
+      if (!currentVerificationId && !lastNonVerifyBlocked) {
         setPill("", "standby");
       }
     } else if (msg.type === "family_report") {
       renderReport(msg);
+      if (!currentVerificationId && lastNonVerifyBlocked) {
+        idleCard.classList.add("hidden");
+      }
     }
   };
 
