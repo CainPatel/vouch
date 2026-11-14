@@ -47,9 +47,6 @@ const audio = new CallerAudioEngine({
   },
   onClipEnded: () => {
     document.querySelectorAll(".scenario-btn").forEach((b) => b.classList.remove("playing"));
-    if (ws && ws.readyState === WebSocket.OPEN && callActive) {
-      ws.send(JSON.stringify({ type: "caller_speech_end" }));
-    }
   },
 });
 

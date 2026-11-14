@@ -88,3 +88,19 @@
   - Median `"Not me"` tap -> first assistant audio: **0.758s** (improved from `0.905s`, `-0.147s`, and faster than M4 `0.782s`)
   - Median end of caller speech -> first assistant audio: **1.584s** (improved from `1.797s`, `-0.213s`, and faster than M4 `1.725s`)
 - **Decision:** Every metric held or improved; committed as `m6-iter2`.
+
+## 2026-11-14 01:24 PST — Improvement Loop Iteration 3
+- **Measured Baseline (from Iteration 2):**
+  - Hero pass rate: `10/10`
+  - Median `"Not me"` tap -> first assistant audio: `0.758s`
+  - Median end of caller speech -> first assistant audio: `1.584s`
+  - Scripted scenarios producing correct action: `3/3`
+- **Listen-by-Proxy Audit (`artifacts/*_transcript.txt` + `artifacts/screenshots/demo_*.png`):**
+  - **Single worst problem a judge would notice:** On `/demo`, the right-sidebar `LATENCY TELEMETRY` panel stayed blank (`—`) throughout active screening/verification/pass-through (`demo_03`, `demo_05`, `demo_06`) and displayed a bogus `Speech -> voice: 0.01s` in `demo_04` because `caller_speech_ended_at` was overwritten when scripted clip trailing silence finished (`onClipEnded`) and `metrics` was only broadcast on `call_ended`. Also, in-flight pre-tap hold audio chunks could trigger an artificially low `0.045s` `tap -> voice` reading on 1/10 runs.
+- **Fix Applied:** Broadcast live `{"type": "metrics"}` WebSocket updates on `/demo` the moment `first_assistant_audio_at` or `post_tap_first_audio_at` is recorded, lock `caller_speech_ended_at` once Vouch begins speaking (removing the late `onClipEnded` override), and gate `post_tap_first_audio_at` on pre-tap turn completion (`_in_model_turn`).
+- **Re-measured Metrics (Iteration 3):**
+  - Hero pass rate: **10 / 10** (held)
+  - Scripted scenarios producing correct action: **3 / 3** (held)
+  - Median `"Not me"` tap -> first assistant audio: **0.726s** (improved from `0.758s`, `-0.032s`, with zero fake pre-tap tail outliers; range `0.609s–1.336s`)
+  - Median end of caller speech -> first assistant audio: **1.784s** (held within live Gemini API variance of M4 `1.725s` / Iter 1 `1.797s`, and `/demo` screenshots now show accurate live telemetry `1.28s`–`1.60s` and `0.66s` on screen)
+- **Decision:** Reliability held `10/10`, `tap -> voice` improved to `0.726s`, and live `/demo` telemetry bug resolved; committed as `m6-iter3`.

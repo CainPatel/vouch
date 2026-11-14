@@ -126,6 +126,8 @@ class GeminiLiveScreenerSession:
         self._turn_audio_bytes: int = 0
         self._total_audio_bytes: int = 0
         self._post_tap_audio_bytes: int = 0
+        self._in_model_turn: bool = False
+        self._arm_post_tap_on_turn_break: bool = False
         self._active_model: str = ""
 
     def _spawn(self, coro) -> None:
@@ -273,6 +275,10 @@ class GeminiLiveScreenerSession:
         sc = getattr(response, "server_content", None)
         if sc is not None:
             if getattr(sc, "interrupted", False):
+                self._in_model_turn = False
+                if self._arm_post_tap_on_turn_break:
+                    self._arm_post_tap_on_turn_break = False
+                    self.controller._awaiting_post_tap_audio = True
                 await self.controller.on_assistant_interrupted()
 
             in_tr = getattr(sc, "input_transcription", None)
@@ -285,10 +291,11 @@ class GeminiLiveScreenerSession:
                 for part in model_turn.parts:
                     inline = getattr(part, "inline_data", None)
                     if inline and getattr(inline, "data", None):
+                        self._in_model_turn = True
                         chunk = inline.data
                         self._turn_audio_bytes += len(chunk)
                         self._total_audio_bytes += len(chunk)
-                        if self._verification_outcome is not None:
+                        if self.controller._awaiting_post_tap_audio:
                             self._post_tap_audio_bytes += len(chunk)
                         await self.controller.on_assistant_audio(chunk)
 
@@ -297,6 +304,10 @@ class GeminiLiveScreenerSession:
                 await self.controller.on_assistant_transcript(out_tr.text, final=False)
 
             if getattr(sc, "turn_complete", False):
+                self._in_model_turn = False
+                if self._arm_post_tap_on_turn_break:
+                    self._arm_post_tap_on_turn_break = False
+                    self.controller._awaiting_post_tap_audio = True
                 await self.controller.on_turn_complete()
                 await self._on_model_turn_complete()
                 self._turn_audio_bytes = 0
@@ -384,11 +395,19 @@ class GeminiLiveScreenerSession:
             )
 
         try:
+            if self._in_model_turn:
+                self._arm_post_tap_on_turn_break = True
+            else:
+                self.controller._awaiting_post_tap_audio = True
             await session.send_client_content(
                 turns=[{"role": "user", "parts": [{"text": prompt}]}],
                 turn_complete=True,
             )
-            self.controller._awaiting_post_tap_audio = True
+            if self._arm_post_tap_on_turn_break:
+                await asyncio.sleep(0.22)
+                if self._arm_post_tap_on_turn_break:
+                    self._arm_post_tap_on_turn_break = False
+                    self.controller._awaiting_post_tap_audio = True
         except Exception as exc:
             logger.warning("Failed to inject verification result turn: %s", exc)
 

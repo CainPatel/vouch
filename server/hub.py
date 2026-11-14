@@ -90,20 +90,23 @@ class RoomSessionController:
             pass
 
     def mark_caller_speech_end(self) -> None:
+        if self.room.metrics.first_assistant_audio_at is not None:
+            return
         now = time.time()
-        self.room.metrics.caller_speech_ended_at = now
-        # Reset first_assistant_audio_at if it was from an earlier greeting before caller spoke
-        if (
-            self.room.metrics.first_assistant_audio_at is not None
-            and self.room.metrics.first_assistant_audio_at < now
-        ):
-            self.room.metrics.first_assistant_audio_at = None
+        if self.room.metrics.caller_speech_ended_at is None:
+            self.room.metrics.caller_speech_ended_at = (
+                self._last_caller_voice_ts if self._last_caller_voice_ts > 0 else now
+            )
 
     async def handle_caller_audio(self, pcm16k: bytes) -> None:
         if self._closed or not self.session:
             return
         self.room.touch()
-        if len(pcm16k) >= 4:
+        if (
+            len(pcm16k) >= 4
+            and self.room.state == CallState.SCREENING
+            and self.room.metrics.first_assistant_audio_at is None
+        ):
             samples = memoryview(pcm16k[: len(pcm16k) & ~1]).cast("h")
             # Fast subsampled mean absolute amplitude
             step = max(1, len(samples) // 64)
@@ -120,11 +123,6 @@ class RoomSessionController:
             elif self._caller_speaking and (now - self._last_caller_voice_ts) >= 0.28:
                 self._caller_speaking = False
                 self.room.metrics.caller_speech_ended_at = self._last_caller_voice_ts
-                if (
-                    self.room.metrics.first_assistant_audio_at is not None
-                    and self.room.metrics.first_assistant_audio_at < self._last_caller_voice_ts
-                ):
-                    self.room.metrics.first_assistant_audio_at = None
         await self.session.send_audio(pcm16k)
 
     async def handle_caller_text(self, text: str) -> None:
@@ -194,20 +192,29 @@ class RoomSessionController:
         if self._closed or self.room.active_call_id != self.call_id or not pcm24k:
             return
         now = time.time()
-        if (
-            self.room.metrics.caller_speech_ended_at is not None
-            and self.room.metrics.first_assistant_audio_at is None
-        ):
-            self.room.metrics.first_assistant_audio_at = now
+        metrics_updated = False
+        if self.room.metrics.first_assistant_audio_at is None:
+            if self.room.metrics.caller_speech_ended_at is None and self._last_caller_voice_ts > 0:
+                self.room.metrics.caller_speech_ended_at = self._last_caller_voice_ts
+                self._caller_speaking = False
+            if self.room.metrics.caller_speech_ended_at is not None:
+                self.room.metrics.first_assistant_audio_at = now
+                metrics_updated = True
         if self._awaiting_post_tap_audio and self.room.metrics.post_tap_first_audio_at is None:
             self.room.metrics.post_tap_first_audio_at = now
-        if self.room.metrics.verification_tapped_at is not None:
+            metrics_updated = True
+        if self._awaiting_post_tap_audio:
             self._assistant_audio_bytes_post_tap += len(pcm24k)
 
         if is_test_mode():
             self._test_audio_chunks.append(pcm24k)
 
         await self.hub.broadcast_audio(self.room.code, pcm24k)
+        if metrics_updated:
+            await self.hub.broadcast_json(
+                self.room.code,
+                {"type": "metrics", "metrics": self.room.metrics.to_dict()},
+            )
 
     # --- Tool Handlers ---
 

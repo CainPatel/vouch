@@ -119,6 +119,8 @@ function connectDemoWs() {
         assistantCaptionText.textContent = msg.text;
         remoteAssistantPulse = 0.75;
       }
+    } else if (msg.type === "metrics") {
+      updateMetrics(msg.metrics);
     } else if (msg.type === "call_ended") {
       updateMetrics(msg.metrics);
     }
