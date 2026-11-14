@@ -120,6 +120,7 @@ class GeminiLiveScreenerSession:
         self._caller_spoke = False
         self._on_hold = False
         self._pending_hangup = False
+        self._closing_turn_finished = False
         self._verification_outcome: str | None = None
         self._verified_name: str = ""
         self._verified_amount: str = ""
@@ -272,6 +273,8 @@ class GeminiLiveScreenerSession:
                 break
 
     async def _process_server_message(self, session: Any, response: Any) -> None:
+        if self._closing_turn_finished:
+            return
         sc = getattr(response, "server_content", None)
         if sc is not None:
             if getattr(sc, "interrupted", False):
@@ -336,12 +339,13 @@ class GeminiLiveScreenerSession:
                     )
             self._pending_hangup = True
 
-        if self._pending_hangup and not self._closed:
+        if self._pending_hangup and not self._closed and not self._closing_turn_finished:
             # Wait until spoken closing sentence has actually been generated before hanging up
             if self._verification_outcome is not None and self._post_tap_audio_bytes < 12000:
                 return
             if self._verification_outcome is None and self._total_audio_bytes < 12000:
                 return
+            self._closing_turn_finished = True
             closing_bytes = self._post_tap_audio_bytes if self._verification_outcome is not None else max(self._turn_audio_bytes, self._total_audio_bytes)
             closing_audio_s = closing_bytes / 48000.0
             drain_s = min(4.5, max(1.5, closing_audio_s * 0.75))
@@ -412,9 +416,11 @@ class GeminiLiveScreenerSession:
             logger.warning("Failed to inject verification result turn: %s", exc)
 
     async def _handle_function_calls(self, session: Any, fcs: list[Any]) -> None:
+        if self._closing_turn_finished:
+            return
         responses: list[types.FunctionResponse] = []
         for fc in fcs:
-            if self._closed:
+            if self._closed or self._closing_turn_finished:
                 return
             name = fc.name
             args = dict(fc.args or {})
@@ -460,11 +466,16 @@ class GeminiLiveScreenerSession:
                 if self.controller._terminal_outcome is None:
                     await self.controller.tool_block_call(reason=reason, scam_type=scam_type)
                 self._pending_hangup = True
-                if self._verification_outcome is not None:
-                    instr = "Already recorded. Do not repeat anything you already said."
-                elif self._turn_audio_bytes >= 12000:
-                    instr = "Call marked blocked. Do not add anything further."
+                if self._verification_outcome is not None and self._post_tap_audio_bytes >= 12000:
+                    self._closing_turn_finished = True
+                    self._spawn(self.controller.finish_call_after_speech(delay_s=2.0))
+                    continue
+                if self._verification_outcome is None and self._turn_audio_bytes >= 12000:
+                    self._closing_turn_finished = True
                     self._spawn(self.controller.finish_call_after_speech(delay_s=2.4))
+                    continue
+                if self._verification_outcome is not None:
+                    instr = f"Call marked blocked. Speak out loud right now: '{self._verified_name or 'Jake'} says he isn't calling. Goodbye.'"
                 else:
                     instr = (
                         "Call marked blocked. Now tell the caller calmly in one sentence: "
@@ -480,16 +491,16 @@ class GeminiLiveScreenerSession:
 
             elif name == "pass_through":
                 summary = str(args.get("summary") or "Routine call for Ruth")
-                await self.controller.tool_pass_through(summary=summary)
+                if self.controller._terminal_outcome is None:
+                    await self.controller.tool_pass_through(summary=summary)
                 self._pending_hangup = True
-                already_spoke = self._turn_audio_bytes >= 12000
-                if already_spoke:
+                if (self._verification_outcome is not None and self._post_tap_audio_bytes >= 12000) or (
+                    self._verification_outcome is None and self._turn_audio_bytes >= 12000
+                ):
+                    self._closing_turn_finished = True
                     self._spawn(self.controller.finish_call_after_speech(delay_s=2.4))
-                instr = (
-                    "Call connected."
-                    if already_spoke
-                    else "Call marked passed through. Tell the caller politely in one sentence: 'This is Ruth's assistant. Thank you — connecting you with Ruth right now.'"
-                )
+                    continue
+                instr = "Call marked passed through. Tell the caller politely in one sentence: 'This is Ruth's assistant. Thank you — connecting you with Ruth right now.'"
                 responses.append(
                     types.FunctionResponse(
                         id=fc.id,
@@ -500,14 +511,14 @@ class GeminiLiveScreenerSession:
 
             elif name == "take_message":
                 summary = str(args.get("summary") or "Caller left a message")
-                await self.controller.tool_take_message(summary=summary)
+                if self.controller._terminal_outcome is None:
+                    await self.controller.tool_take_message(summary=summary)
                 self._pending_hangup = True
-                already_spoke = self._post_tap_audio_bytes >= 12000 or self._turn_audio_bytes >= 12000
-                instr = (
-                    "Message saved."
-                    if already_spoke
-                    else "Message recorded. Tell the caller: 'I couldn't confirm that right now. I'll let Ruth know you called.'"
-                )
+                if self._post_tap_audio_bytes >= 12000 or self._turn_audio_bytes >= 12000:
+                    self._closing_turn_finished = True
+                    self._spawn(self.controller.finish_call_after_speech(delay_s=2.0))
+                    continue
+                instr = "Message recorded. Tell the caller: 'I couldn't confirm that right now. I'll let Ruth know you called.'"
                 responses.append(
                     types.FunctionResponse(
                         id=fc.id,

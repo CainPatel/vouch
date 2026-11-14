@@ -290,3 +290,19 @@
   - Median `"Not me"` tap -> first assistant audio: **0.845s** (held steady within normal live API variance; UI-only change in `family.js`)
   - Median end of caller speech -> first assistant audio: **1.702s** (held steady within normal live API variance vs M4 `1.725s`)
 - **Decision:** Held `10/10` reliability and `3/3` scenarios while making non-verification scam blocks cleanly surface the Carbon security brief on Jake's Phone; committed as `m6-iter15`.
+
+## 2026-11-14 03:03 PST — Improvement Loop Iteration 16
+- **Measured Baseline (from Iteration 15):**
+  - Hero pass rate: `10/10`
+  - Median `"Not me"` tap -> first assistant audio: `0.845s`
+  - Median end of caller speech -> first assistant audio: `1.702s`
+  - Scripted scenarios producing correct action: `3/3`
+- **Listen-by-Proxy Audit (`page_senior_mobile_blocked.png` + `call_263c1192f6_transcript.txt`):**
+  - **Single worst problem a judge would notice:** Once in ~25 calls, after speaking `"Jake says he isn't calling. Goodbye."`, Gemini Live emitted a redundant `block_call` tool call; replying with `send_tool_response` woke the model for an extra trailing turn (`"This call is blocked."`) while playback was draining.
+- **Fix Applied:** Added `_closing_turn_finished` guard in `server/live_session.py` so once the closing sentence (`>= 12000` bytes) has been spoken, redundant terminal tool calls start hangup drain immediately without sending `send_tool_response` and ignore trailing model turns.
+- **Re-measured Metrics (Iteration 16):**
+  - Hero pass rate: **10 / 10** (held — 13/13 transcripts pristine, 0 trailing bubbles)
+  - Scripted scenarios producing correct action: **3 / 3** (held)
+  - Median `"Not me"` tap -> first assistant audio: **0.722s** (improved from `0.845s`, `-0.123s`; individual runs down to `0.528s`)
+  - Median end of caller speech -> first assistant audio: **1.542s** (**new all-time best**, improved from `1.702s`, `-0.160s`)
+- **Decision:** Every metric held or improved (`10/10`, `3/3`, `0.722s` tap->voice, `1.542s` speech->voice) and eliminated redundant trailing turn; committed as `m6-iter16`.
