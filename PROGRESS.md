@@ -21,3 +21,13 @@
 - Enforced 5-room concurrent active cap (with idle room eviction), 3-minute call timeout, and per-IP call-start rate limiting.
 - Created `MORNING.md` per run rules.
 - Unit tests (`tests/test_unit.py`): 5/5 green (`make test`).
+
+## 2026-11-14 00:33 PST — Milestone M2 Complete (`m2`)
+- Generated all 3 scripted caller clips (`grandson_bail.wav`, `bank_fraud.wav`, `pharmacy.wav`) under `static/audio/` using Gemini TTS (`gemini-3.8-flash-tts`) with stock voices (`Puck`, `Charon`, `Zephyr`).
+- Built `server/live_session.py` (`GeminiLiveScreenerSession`) connected to `gemini-3.8-live` with 16kHz PCM streaming input, 24kHz PCM streaming output, input & output audio transcriptions, automatic VAD (`silence_duration_ms=450`), and immediate pending tool acknowledgement + client-turn verification outcome injection.
+- Verified `scripts/audio_smoke.py` (`make smoke`):
+  - Caller transcript: `"Grandma, it's Jake. I'm in trouble. I need $4,000 for bail. Please don't tell mom."`
+  - Pre-tap assistant hold speech: `"This is Ruth's assistant. One moment while I confirm with Jake."` (3.75s audio)
+  - Tool call: `request_family_verification(claimed_name='Jake', relationship='grandson', ask='bail money', amount='$4,000')`
+  - Post-tap assistant speech: `"Jake says he isn't calling. Goodbye."` (3.74s audio)
+  - Latency: `speech_to_first_audio_s = 0.227s`, `tap_to_first_audio_s = 0.689s` (target < 1.5s).

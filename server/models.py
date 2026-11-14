@@ -206,7 +206,7 @@ class Room:
         self, speaker: str, text: str, final: bool = True
     ) -> TranscriptEntry | None:
         cleaned = text.strip() if final else text
-        if not cleaned or not cleaned.strip():
+        if not cleaned or not cleaned.strip() or cleaned.strip() in ("-", "—", "..."):
             return None
         self.touch()
         # Live API streams incremental chunks; merge consecutive non-final chunks from same speaker

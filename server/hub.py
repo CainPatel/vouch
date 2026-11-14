@@ -66,6 +66,8 @@ class RoomSessionController:
         self._awaiting_post_tap_audio = False
         self._test_audio_chunks: list[bytes] = []
         self._assistant_audio_bytes_post_tap: int = 0
+        self._caller_speaking: bool = False
+        self._last_caller_voice_ts: float = 0.0
 
     async def start(self) -> None:
         if is_mock_mode():
@@ -101,6 +103,28 @@ class RoomSessionController:
         if self._closed or not self.session:
             return
         self.room.touch()
+        if len(pcm16k) >= 4:
+            samples = memoryview(pcm16k[: len(pcm16k) & ~1]).cast("h")
+            # Fast subsampled mean absolute amplitude
+            step = max(1, len(samples) // 64)
+            mean_abs = sum(abs(samples[i]) for i in range(0, len(samples), step)) / (
+                max(1, len(range(0, len(samples), step)))
+            )
+            now = time.time()
+            if mean_abs > 380:
+                self._caller_speaking = True
+                self._last_caller_voice_ts = now
+                notify_fn = getattr(self.session, "notify_caller_voice_activity", None)
+                if callable(notify_fn):
+                    notify_fn()
+            elif self._caller_speaking and (now - self._last_caller_voice_ts) >= 0.28:
+                self._caller_speaking = False
+                self.room.metrics.caller_speech_ended_at = self._last_caller_voice_ts
+                if (
+                    self.room.metrics.first_assistant_audio_at is not None
+                    and self.room.metrics.first_assistant_audio_at < self._last_caller_voice_ts
+                ):
+                    self.room.metrics.first_assistant_audio_at = None
         await self.session.send_audio(pcm16k)
 
     async def handle_caller_text(self, text: str) -> None:
