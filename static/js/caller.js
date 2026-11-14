@@ -56,7 +56,7 @@ window.__vouchGetRecordStream = () => (audio.recordDest ? audio.recordDest.strea
 function setStateUI(state) {
   statePill.className = `state-pill ${state}`;
   stateText.textContent = state.replace("_", " ");
-  const inCall = state === "screening" || state === "verifying";
+  const inCall = Boolean(state && state !== "idle");
   callActive = inCall;
   if (inCall) {
     callBtn.className = "call-btn hangup";

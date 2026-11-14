@@ -168,3 +168,19 @@
   - Median `"Not me"` tap -> first assistant audio: **0.670s** (held within 59ms live API variance; tight range `0.540s–0.742s` across all 10 runs)
   - Median end of caller speech -> first assistant audio: **1.591s** (improved from `1.704s`, `-0.113s`; tight range `1.480s–1.705s`)
 - **Decision:** Reliability `10/10`, `speech -> voice` improved to `1.591s`, `tap -> voice` held at `0.670s`; committed as `m6-iter7`. (Also uncovered a real UI bug in `caller.js`: `setStateUI` flips `End Call` back to `Call Ruth` on `blocked`/`passed` before `call_ended` arrives — queued as Iteration 8's single fix.)
+
+## 2026-11-14 02:05 PST — Improvement Loop Iteration 8
+- **Measured Baseline (from Iteration 7):**
+  - Hero pass rate: `10/10`
+  - Median `"Not me"` tap -> first assistant audio: `0.670s`
+  - Median end of caller speech -> first assistant audio: `1.591s`
+  - Scripted scenarios producing correct action: `3/3`
+- **Listen-by-Proxy Audit (`artifacts/*_transcript.txt` + `artifacts/screenshots/demo_*.png`):**
+  - **Single worst problem a judge would notice:** In `static/js/caller.js`, `setStateUI` computed `inCall = state === "screening" || state === "verifying"`, which flipped Caller's Phone button from red `End Call` back to green `Call Ruth` prematurely while Vouch was still speaking its closing sentence in `blocked`, `passed`, or `message_taken` states (`demo_05_bank_blocked.png`, `call_af34d5fb43_transcript.txt`).
+- **Fix Applied:** Changed `inCall = Boolean(state && state !== "idle")` in `static/js/caller.js` so Caller's Phone stays in-call until `call_ended` (`idle`).
+- **Re-measured Metrics (Iteration 8):**
+  - Hero pass rate: **10 / 10** (held — 90/90 cumulative consecutive passes; 13/13 transcripts complete word-for-word including full Bank Fraud and Pharmacy closing sentences)
+  - Scripted scenarios producing correct action: **3 / 3** (held)
+  - Median `"Not me"` tap -> first assistant audio: **0.784s** (held within live Gemini API variance; zero backend lines changed)
+  - Median end of caller speech -> first assistant audio: **1.553s** (improved from `1.591s`, `-0.038s` — fastest 10-run speech-to-voice median yet!)
+- **Decision:** Held `10/10` reliability, improved `speech -> voice` to `1.553s`, and resolved premature `Call Ruth` button reset & Bank Fraud screenshot completeness; committed as `m6-iter8`.
