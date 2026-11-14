@@ -168,8 +168,8 @@ def run_single_hero_fake_mic(base_url: str, record_video_dir: Path | None = None
                     break
                 demo_page.wait_for_timeout(150)
 
-            # Wait up to 3s for call_ended metrics event to arrive
-            end_wait = time.time() + 4.0
+            # Wait up to 9s for call_ended event (and artifact flush) to arrive
+            end_wait = time.time() + 9.0
             while time.time() < end_wait and not any(
                 m.get("type") == "call_ended" for m in demo_Metrics
             ):
@@ -190,18 +190,24 @@ def run_single_hero_fake_mic(base_url: str, record_video_dir: Path | None = None
                 f"Expected >1.0s of assistant audio played after tap, got {stats}"
             )
 
-            # If running against local test-mode server, check captured assistant transcript file
+            end_events = [m for m in demo_Metrics if m.get("type") == "call_ended"]
+            live_metric_events = [m for m in demo_Metrics if m.get("type") == "metrics"]
+            call_id = end_events[-1].get("call_id") if end_events else None
+
+            # If running against local test-mode server, check this call's captured assistant transcript file
             if not os.getenv("VOUCH_E2E_URL"):
-                latest_txt = ARTIFACTS_DIR / "latest_transcript.txt"
-                if latest_txt.exists():
-                    txt_content = latest_txt.read_text(encoding="utf-8").lower()
+                target_txt = (
+                    ARTIFACTS_DIR / f"call_{call_id}_transcript.txt"
+                    if call_id
+                    else ARTIFACTS_DIR / "latest_transcript.txt"
+                )
+                if target_txt.exists():
+                    txt_content = target_txt.read_text(encoding="utf-8").lower()
                     assert any(
                         p in txt_content
                         for p in ("isn't calling", "is not calling", "not calling", "wasn't calling", "goodbye")
                     ), f"Artifact transcript missing denial: {txt_content}"
 
-            end_events = [m for m in demo_Metrics if m.get("type") == "call_ended"]
-            live_metric_events = [m for m in demo_Metrics if m.get("type") == "metrics"]
             metrics = (
                 end_events[-1].get("metrics", {})
                 if end_events
