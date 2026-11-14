@@ -124,6 +124,7 @@ class GeminiLiveScreenerSession:
         self._verified_name: str = ""
         self._verified_amount: str = ""
         self._turn_audio_bytes: int = 0
+        self._total_audio_bytes: int = 0
         self._post_tap_audio_bytes: int = 0
         self._active_model: str = ""
 
@@ -286,6 +287,7 @@ class GeminiLiveScreenerSession:
                     if inline and getattr(inline, "data", None):
                         chunk = inline.data
                         self._turn_audio_bytes += len(chunk)
+                        self._total_audio_bytes += len(chunk)
                         if self._verification_outcome is not None:
                             self._post_tap_audio_bytes += len(chunk)
                         await self.controller.on_assistant_audio(chunk)
@@ -327,7 +329,9 @@ class GeminiLiveScreenerSession:
             # Wait until spoken closing sentence has actually been generated before hanging up
             if self._verification_outcome is not None and self._post_tap_audio_bytes < 12000:
                 return
-            closing_bytes = self._post_tap_audio_bytes if self._verification_outcome is not None else self._turn_audio_bytes
+            if self._verification_outcome is None and self._total_audio_bytes < 12000:
+                return
+            closing_bytes = self._post_tap_audio_bytes if self._verification_outcome is not None else max(self._turn_audio_bytes, self._total_audio_bytes)
             closing_audio_s = closing_bytes / 48000.0
             drain_s = min(4.5, max(1.5, closing_audio_s * 0.75))
             self._spawn(self.controller.finish_call_after_speech(delay_s=drain_s))

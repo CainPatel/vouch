@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import secrets
 import time
 import uuid
@@ -205,6 +206,8 @@ class Room:
     def add_or_merge_transcript(
         self, speaker: str, text: str, final: bool = True
     ) -> TranscriptEntry | None:
+        # Strip Gemini ASR non-speech control tags like <no speech> or {pause}
+        text = re.sub(r"<[^>]{1,32}>|\{[^{}]{1,32}\}", "", text)
         cleaned = text.strip() if final else text
         if not cleaned or not cleaned.strip() or cleaned.strip() in ("-", "—", "..."):
             return None

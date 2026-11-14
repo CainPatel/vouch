@@ -154,7 +154,8 @@ def run_three_scenarios(base_url: str, take_screenshots: bool = False) -> dict[s
         while time.time() < deadline:
             hl = senior_f3.get_by_test_id("senior-headline").inner_text().lower()
             pill = senior_f3.get_by_test_id("senior-state").inner_text().lower()
-            if "incoming call:" in hl or "passed" in pill:
+            tr = senior_f3.get_by_test_id("senior-transcript").inner_text().lower()
+            if ("incoming call:" in hl or "passed" in pill) and "assistant" in tr:
                 results["pharmacy"] = True
                 break
             page3.wait_for_timeout(200)

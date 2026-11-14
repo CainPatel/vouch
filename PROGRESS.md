@@ -56,3 +56,19 @@
 - Verified `.env` is excluded from the Docker image (`test ! -f /app/.env`).
 - Ran container locally via `docker run` and passed `tests/test_hero_e2e.py` against the containerized service (`16.06s`, `Blocked: someone impersonating Jake asked for $4,000.`).
 - Documented exact 3-command Cloud Run deployment at the top of `MORNING.md` and in `BLOCKED.md` (`gcloud` is not installed on this Mac per run rules).
+
+## 2026-11-14 01:08 PST — Improvement Loop Iteration 1
+- **Measured Baseline (from M4 10-run + 3-scenario eval):**
+  - Hero pass rate: `10/10`
+  - Median `"Not me"` tap -> first assistant audio: `0.782s`
+  - Median end of caller speech -> first assistant audio: `1.725s`
+  - Scripted scenarios producing correct action: `3/3`
+- **Listen-by-Proxy Audit (`artifacts/*_transcript.txt` + `artifacts/screenshots/demo_*.png`):**
+  - **Single worst problem a judge would notice:** In `demo_06_pharmacy_passed.png` and `call_93188a93af_transcript.txt`, when `gemini-3.8-live` invoked `pass_through` before speaking, `_on_model_turn_complete` only checked `_post_tap_audio_bytes < 12000` when `_verification_outcome is not None`, so the call closed before the assistant spoke `"This is Ruth's assistant. Thank you — connecting you with Ruth right now."` out loud (`44`-byte WAV, bottom caption stuck on `"Screening incoming call..."`). Also noticed one transcript contained raw ASR control tag `<no speech>{pause}`.
+- **Fix Applied:** Require spoken assistant audio (`>= 12000` bytes = `0.25s+`) after any terminal tool call (`pass_through`, `block_call`, `take_message`) before hanging up, and strip `<...>`/`{...}` ASR non-speech markers from transcripts.
+- **Re-measured Metrics (Iteration 1):**
+  - Hero pass rate: **10 / 10** (held)
+  - Scripted scenarios producing correct action + spoken assistant line: **3 / 3** (improved from `2/3` spoken — Pharmacy now speaks `"This is Ruth's assistant. Thank you — I'll connect you with Ruth right now."` out loud before connecting)
+  - Median `"Not me"` tap -> first assistant audio: **0.905s** (within normal live Gemini API variance of M4's `0.535s–1.372s` range; well below `1.5s` target)
+  - Median end of caller speech -> first assistant audio: **1.797s** (within normal live Gemini API variance of M4's `1.466s–2.298s` range)
+- **Decision:** Held `10/10` reliability and fixed silent pass-through hangup (`2/3 -> 3/3` spoken scenarios); committed as `m6-iter1`.
