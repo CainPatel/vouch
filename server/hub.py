@@ -68,6 +68,7 @@ class RoomSessionController:
         self._assistant_audio_bytes_post_tap: int = 0
         self._caller_speaking: bool = False
         self._last_caller_voice_ts: float = 0.0
+        self._report_started: bool = False
 
     async def start(self) -> None:
         if is_mock_mode():
@@ -322,6 +323,7 @@ class RoomSessionController:
                 "headline": headline,
             },
         )
+        self._maybe_start_background_report(delay_s=0.45)
         return "call_marked_blocked"
 
     async def tool_pass_through(self, summary: str) -> str:
@@ -344,6 +346,7 @@ class RoomSessionController:
             self.room.code,
             {"type": "call_passed_through", "summary": clean_summary},
         )
+        self._maybe_start_background_report(delay_s=0.45)
         return "call_passed_through"
 
     async def tool_take_message(self, summary: str) -> str:
@@ -366,6 +369,7 @@ class RoomSessionController:
             self.room.code,
             {"type": "call_message_taken", "summary": clean_summary},
         )
+        self._maybe_start_background_report(delay_s=0.45)
         return "message_recorded"
 
     async def finish_call_after_speech(self, delay_s: float = 0.25) -> None:
@@ -478,8 +482,27 @@ class RoomSessionController:
         )
 
         # Kick off Gemini 4 Carbon post-call report in background without blocking call flow
-        if outcome in ("blocked", "passed", "message_taken"):
+        if outcome in ("blocked", "passed", "message_taken") and not self._report_started:
+            self._report_started = True
             asyncio.create_task(self._emit_background_report(report_input))
+
+    def _maybe_start_background_report(self, delay_s: float = 0.45) -> None:
+        if self._report_started or not self._terminal_outcome:
+            return
+        self._report_started = True
+        asyncio.create_task(self._delayed_background_report(delay_s))
+
+    async def _delayed_background_report(self, delay_s: float) -> None:
+        if delay_s > 0:
+            await asyncio.sleep(delay_s)
+        report_input = {
+            "call_id": self.call_id,
+            "outcome": self._terminal_outcome or "ended",
+            "verdict_text": self._terminal_verdict_text,
+            "verification": self.room.verification.to_dict() if self.room.verification else None,
+            "transcripts": [t.to_dict() for t in self.room.transcripts],
+        }
+        await self._emit_background_report(report_input)
 
     async def _emit_background_report(self, report_input: dict[str, Any]) -> None:
         try:

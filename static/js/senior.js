@@ -24,6 +24,7 @@ const historyList = document.getElementById("historyList");
 let transcripts = [];
 let historyItems = [];
 let stickyVerdict = null; // Keep verdict prominently visible after call returns to idle
+let optimisticHistoryAdded = false;
 
 function updatePill(state) {
   statePill.className = `state-pill ${state}`;
@@ -118,15 +119,16 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;");
 }
 
-function applyVerdictCard(verdict) {
+function applyVerdictCard(verdict, { addOptimisticHistory = false } = {}) {
   if (!verdict) return;
   stickyVerdict = verdict;
-  const histHeadline =
-    verdict.outcome === "passed"
-      ? `Passed through: ${verdict.summary || verdict.headline}`
-      : verdict.headline;
-  if (!historyItems.some((h) => h.headline === histHeadline)) {
-    historyItems = [{ outcome: verdict.outcome, headline: histHeadline }, ...historyItems].slice(0, 10);
+  if (addOptimisticHistory && !optimisticHistoryAdded) {
+    const histHeadline =
+      verdict.outcome === "passed"
+        ? `Passed through: ${verdict.summary || verdict.headline}`
+        : verdict.headline;
+    historyItems = [{ outcome: verdict.outcome, headline: histHeadline, _optimistic: true }, ...historyItems].slice(0, 10);
+    optimisticHistoryAdded = true;
     renderHistory();
   }
   if (verdict.outcome === "blocked") {
@@ -194,6 +196,7 @@ function connectWs() {
       }
     } else if (msg.type === "call_started") {
       stickyVerdict = null;
+      optimisticHistoryAdded = false;
       carbonCard.classList.add("hidden");
       transcripts = [];
       renderTranscripts();
@@ -230,32 +233,43 @@ function connectWs() {
         );
       }
     } else if (msg.type === "call_blocked") {
-      applyVerdictCard({
-        outcome: "blocked",
-        headline: msg.headline,
-        reason: msg.reason,
-      });
+      applyVerdictCard(
+        {
+          outcome: "blocked",
+          headline: msg.headline,
+          reason: msg.reason,
+        },
+        { addOptimisticHistory: true }
+      );
       updatePill("blocked");
     } else if (msg.type === "call_passed_through") {
-      applyVerdictCard({
-        outcome: "passed",
-        summary: msg.summary,
-        headline: msg.summary,
-      });
+      applyVerdictCard(
+        {
+          outcome: "passed",
+          summary: msg.summary,
+          headline: msg.summary,
+        },
+        { addOptimisticHistory: true }
+      );
       updatePill("passed");
     } else if (msg.type === "call_message_taken") {
-      applyVerdictCard({
-        outcome: "message_taken",
-        summary: msg.summary,
-        headline: `Message taken: ${msg.summary}`,
-      });
+      applyVerdictCard(
+        {
+          outcome: "message_taken",
+          summary: msg.summary,
+          headline: `Message taken: ${msg.summary}`,
+        },
+        { addOptimisticHistory: true }
+      );
       updatePill("message_taken");
     } else if (msg.type === "transcript") {
       upsertTranscript(msg.speaker, msg.text, msg.final);
     } else if (msg.type === "call_ended") {
       if (msg.history_item) {
+        historyItems = historyItems.filter((h) => !h._optimistic && h.call_id !== msg.history_item.call_id);
         historyItems.unshift(msg.history_item);
         historyItems = historyItems.slice(0, 10);
+        optimisticHistoryAdded = false;
         renderHistory();
       }
       if (!stickyVerdict) {

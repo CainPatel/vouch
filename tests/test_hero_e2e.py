@@ -201,7 +201,12 @@ def run_single_hero_fake_mic(base_url: str, record_video_dir: Path | None = None
                     ), f"Artifact transcript missing denial: {txt_content}"
 
             end_events = [m for m in demo_Metrics if m.get("type") == "call_ended"]
-            metrics = end_events[-1].get("metrics", {}) if end_events else {}
+            live_metric_events = [m for m in demo_Metrics if m.get("type") == "metrics"]
+            metrics = (
+                end_events[-1].get("metrics", {})
+                if end_events
+                else (live_metric_events[-1].get("metrics", {}) if live_metric_events else {})
+            )
 
             return {
                 "room": room,
@@ -224,7 +229,7 @@ def _capture_ws_metrics(payload: str | bytes, sink: list[dict]) -> None:
 
     try:
         obj = json.loads(payload)
-        if obj.get("type") in ("call_ended", "verification_requested", "call_blocked"):
+        if obj.get("type") in ("call_ended", "metrics", "verification_requested", "call_blocked"):
             sink.append(obj)
     except Exception:
         pass

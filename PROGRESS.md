@@ -136,3 +136,19 @@
   - Median `"Not me"` tap -> first assistant audio: **0.798s** (held within live Gemini API variance; zero audio/network lines changed)
   - Median end of caller speech -> first assistant audio: **1.873s** (improved from `1.904s`, `-0.031s`)
 - **Decision:** Held `10/10` reliability and eliminated split-chunk `<no speech>` artifacts (`13/13` transcripts pristine); committed as `m6-iter5`.
+
+## 2026-11-14 01:52 PST — Improvement Loop Iteration 6
+- **Measured Baseline (from Iteration 5):**
+  - Hero pass rate: `10/10`
+  - Median `"Not me"` tap -> first assistant audio: `0.798s`
+  - Median end of caller speech -> first assistant audio: `1.873s`
+  - Scripted scenarios producing correct action: `3/3`
+- **Listen-by-Proxy Audit (`artifacts/*_transcript.txt` + `artifacts/screenshots/demo_*.png`):**
+  - **Single worst problem a judge would notice:** In `demo_04_blocked_with_carbon_report.png`, `Screened Call History` showed two duplicate rows for the same call (both `applyVerdictCard` and `call_ended` prepended an item), and `Report by Gemini 4 Carbon` didn't start generating until after `end_call` (~6.6s after the verdict), delaying the report card ~12s after tapping **Not me**.
+- **Fix Applied:** Deduplicated optimistic vs `call_ended` history entries in `senior.js`, triggered the non-blocking Gemini 4 Carbon background report `0.45s` after the verdict is recorded (`server/hub.py`) so it arrives ~3–4s after the verdict without competing with live voice synthesis, and recorded live `metrics` WS events in `tests/test_hero_e2e.py`.
+- **Re-measured Metrics (Iteration 6):**
+  - Hero pass rate: **10 / 10** (held — 70/70 cumulative consecutive passes)
+  - Scripted scenarios producing correct action: **3 / 3** (held)
+  - Median `"Not me"` tap -> first assistant audio: **0.611s** (improved from `0.798s`, `-0.187s` — fastest 10-run median yet; range `0.531s–0.947s`)
+  - Median end of caller speech -> first assistant audio: **1.704s** (improved from `1.873s`, `-0.169s`, and faster than M4 `1.725s`)
+- **Decision:** Every metric held or improved (`10/10`, `3/3`, `0.611s` tap->voice, `1.704s` speech->voice), single history row, and fast Gemini 4 Carbon report on `/senior` & `/family`; committed as `m6-iter6`.
