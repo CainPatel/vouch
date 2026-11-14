@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ruth's Phone · Vouch</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body class="phone-body" id="bodyRoot">
+  <main class="phone-app">
+    <header class="phone-topbar">
+      <div>
+        <div class="phone-role">Protected Senior</div>
+        <div class="phone-owner">Ruth's Phone</div>
+      </div>
+      <div class="state-pill" id="statePill" data-testid="senior-state">
+        <span class="dot"></span>
+        <span id="stateText">idle</span>
+      </div>
+    </header>
+
+    <section class="hero-status-card" id="statusCard" data-testid="senior-verdict-card">
+      <div class="status-kicker" id="statusKicker">Protected · Silent Mode</div>
+      <div class="status-headline" id="statusHeadline" data-testid="senior-headline">
+        Unknown calls are answered by Vouch before Ruth&rsquo;s phone rings.
+      </div>
+      <div class="status-sub" id="statusSub">
+        Known contacts ring straight through. Unknown callers are screened silently.
+      </div>
+    </section>
+
+    <section class="carbon-card hidden" id="carbonCard" data-testid="senior-carbon-report">
+      <div class="carbon-label" id="carbonLabel">Report by Gemini 4 Carbon</div>
+      <div class="carbon-row" id="carbonClaim"></div>
+      <div class="carbon-row" id="carbonPattern"></div>
+      <div class="carbon-row" id="carbonAction"></div>
+      <div class="carbon-row" id="carbonNext"></div>
+    </section>
+
+    <div class="section-label">Live Screening Transcript</div>
+    <div class="transcript-box" id="transcriptBox" data-testid="senior-transcript">
+      <div class="transcript-empty" id="transcriptEmpty">No active call.</div>
+    </div>
+
+    <div class="section-label">Screened Call History</div>
+    <div class="history-list" id="historyList" data-testid="senior-history">
+      <div class="transcript-empty">No screened calls yet.</div>
+    </div>
+  </main>
+  <script type="module" src="/static/js/senior.js"></script>
+</body>
+</html>

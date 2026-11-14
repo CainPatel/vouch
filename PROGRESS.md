@@ -14,3 +14,10 @@
 - Scaffolded FastAPI backend (`server/`), static assets (`static/`), `Makefile`, `pyproject.toml`, `.gitignore`, `.env.example`, `BLOCKED.md`, `server/contacts.json`, and `server/prompts/screener.md`.
 - Verified `make run` serves `/` ("Start demo") and `/api/health` in both live discovery mode (`gemini-3.8-live`, `gemini-4-carbon`, `gemini-3.8-flash-tts`) and mock mode (`VOUCH_MOCK=1`).
 - Verified `.gitignore` excludes `.env`.
+
+## 2026-11-14 00:20 PST — Milestone M1 Complete (`m1`)
+- Built room state machine (`server/models.py`: `idle -> screening -> verifying -> passed | blocked | message_taken -> idle`), `RoomHub` (`server/hub.py`), mock session (`server/mock_session.py`), and Gemini 4 Carbon background post-call report (`server/report.py`).
+- Wired all 5 routes (`/`, `/demo`, `/caller`, `/senior`, `/family`), inline SVG QR code endpoint (`/api/qr`), WebSocket hub (`/ws`), AudioWorklet processors (`pcm-capture-worklet.js`, `pcm-playback-worklet.js`), and `audio-engine.js`.
+- Enforced 5-room concurrent active cap (with idle room eviction), 3-minute call timeout, and per-IP call-start rate limiting.
+- Created `MORNING.md` per run rules.
+- Unit tests (`tests/test_unit.py`): 5/5 green (`make test`).

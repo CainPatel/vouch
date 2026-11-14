@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Jake's Phone · Family Check · Vouch</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body class="phone-body" id="bodyRoot">
+  <main class="phone-app">
+    <header class="phone-topbar">
+      <div>
+        <div class="phone-role">Trusted Family Contact</div>
+        <div class="phone-owner" id="familyOwnerTitle">Jake's Phone</div>
+      </div>
+      <div class="state-pill" id="statePill" data-testid="family-state">
+        <span class="dot"></span>
+        <span id="stateText">standby</span>
+      </div>
+    </header>
+
+    <section class="family-idle-card" id="idleCard" data-testid="family-idle-card">
+      <div class="status-kicker" style="color: var(--accent);">Vouch Family Link Ready</div>
+      <div class="status-headline">Protecting Ruth</div>
+      <div class="status-sub">
+        If an unknown caller ever claims to be you or asks Ruth for emergency money, a one-tap check will appear right here.
+      </div>
+    </section>
+
+    <section class="verify-alert-card hidden" id="verifyCard" data-testid="family-verification-card">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="verify-badge">Urgent Identity Check</div>
+        <div class="verify-question" id="verifyQuestion" data-testid="verify-question">
+          Someone claiming to be you is on the phone with Ruth asking for money. Is this you?
+        </div>
+        <div class="verify-details">
+          <div class="verify-field">
+            <div class="lbl">Claimed Name</div>
+            <div class="val" id="valName" data-testid="verify-claimed-name">Jake</div>
+          </div>
+          <div class="verify-field">
+            <div class="lbl">Relationship</div>
+            <div class="val" id="valRel">grandson</div>
+          </div>
+          <div class="verify-field">
+            <div class="lbl">Reason Given</div>
+            <div class="val" id="valAsk">bail</div>
+          </div>
+          <div class="verify-field">
+            <div class="lbl">Amount Requested</div>
+            <div class="val amount" id="valAmount" data-testid="verify-amount">$4,000</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="verify-actions" id="verifyActions">
+        <button class="btn-not-me" id="btnNotMe" data-testid="btn-not-me">
+          Not me &mdash; Block Call
+        </button>
+        <button class="btn-yes-me" id="btnYesMe" data-testid="btn-yes-me">
+          Yes, that&rsquo;s me
+        </button>
+      </div>
+
+      <div class="verify-resolved-banner hidden" id="resolvedBanner" data-testid="verify-resolved"></div>
+    </section>
+
+    <section class="carbon-card hidden" id="carbonCard" data-testid="family-carbon-report">
+      <div class="carbon-label" id="carbonLabel">Report by Gemini 4 Carbon</div>
+      <div class="carbon-row" id="carbonClaim"></div>
+      <div class="carbon-row" id="carbonPattern"></div>
+      <div class="carbon-row" id="carbonAction"></div>
+      <div class="carbon-row" id="carbonNext"></div>
+    </section>
+  </main>
+  <script type="module" src="/static/js/family.js"></script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Caller · Vouch</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body class="phone-body" id="bodyRoot">
+  <main class="phone-app">
+    <header class="phone-topbar">
+      <div>
+        <div class="phone-role">Incoming Unknown Number</div>
+        <div class="phone-owner">Caller's Phone</div>
+      </div>
+      <div class="state-pill" id="statePill" data-testid="caller-state">
+        <span class="dot"></span>
+        <span id="stateText">idle</span>
+      </div>
+    </header>
+
+    <button class="call-btn start" id="callBtn" data-testid="call-ruth-btn">
+      <span id="callBtnLabel">Call Ruth</span>
+    </button>
+
+    <div class="controls-row">
+      <button class="btn-secondary" id="muteBtn" data-testid="mute-btn">Mic Open</button>
+      <button class="btn-secondary" id="pttToggleBtn" data-testid="ptt-toggle-btn">Push-to-Talk: Off</button>
+      <button class="btn-secondary hidden" id="pttHoldBtn" data-testid="ptt-hold-btn">Hold to Speak</button>
+    </div>
+
+    <div class="hint-banner">
+      Headphones recommended for live open-mic voice so the mic doesn&rsquo;t pick up the speaker.
+    </div>
+
+    <div class="section-label">Scripted Caller Clips</div>
+    <div class="scenario-grid">
+      <button class="scenario-btn" data-scenario="grandson" data-testid="scenario-grandson">
+        <span>1. Grandson in jail ($4,000 bail)</span>
+        <span class="scenario-tag scam">Scam · Hero</span>
+      </button>
+      <button class="scenario-btn" data-scenario="bank" data-testid="scenario-bank">
+        <span>2. Bank fraud department</span>
+        <span class="scenario-tag scam">Scam</span>
+      </button>
+      <button class="scenario-btn" data-scenario="pharmacy" data-testid="scenario-pharmacy">
+        <span>3. Elm Street Pharmacy</span>
+        <span class="scenario-tag legit">Legitimate</span>
+      </button>
+    </div>
+
+    <div class="section-label">Live Call Transcript</div>
+    <div class="transcript-box" id="transcriptBox" data-testid="caller-transcript">
+      <div class="transcript-empty" id="transcriptEmpty">Tap &ldquo;Call Ruth&rdquo; or choose a scenario clip.</div>
+    </div>
+
+    <form class="text-fallback-form" id="textForm">
+      <input
+        type="text"
+        class="text-fallback-input"
+        id="textInput"
+        data-testid="caller-text-input"
+        placeholder="Testing fallback: type caller speech..."
+        autocomplete="off"
+      />
+      <button type="submit" class="text-fallback-send" data-testid="caller-text-send">Send</button>
+    </form>
+  </main>
+  <script type="module" src="/static/js/caller.js"></script>
+</body>
+</html>
