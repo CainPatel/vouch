@@ -346,7 +346,8 @@ class RoomSessionController:
             self.room.code,
             {"type": "call_passed_through", "summary": clean_summary},
         )
-        self._maybe_start_background_report(delay_s=0.45)
+        if self.room.verification is not None:
+            self._maybe_start_background_report(delay_s=0.45)
         return "call_passed_through"
 
     async def tool_take_message(self, summary: str) -> str:
@@ -482,7 +483,10 @@ class RoomSessionController:
         )
 
         # Kick off Gemini 4 Carbon post-call report in background without blocking call flow
-        if outcome in ("blocked", "passed", "message_taken") and not self._report_started:
+        should_report = outcome in ("blocked", "message_taken") or (
+            outcome == "passed" and self.room.verification is not None
+        )
+        if should_report and not self._report_started:
             self._report_started = True
             asyncio.create_task(self._emit_background_report(report_input))
 

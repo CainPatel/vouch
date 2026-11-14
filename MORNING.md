@@ -17,8 +17,8 @@ VOUCH_E2E_URL="https://YOUR-CLOUD-RUN-URL.run.app" uv run pytest tests/test_hero
 ## 2. Headline Build Metrics (Milestone M5)
 - **Live Two-Way Audio Shipped:** **YES** — real bidirectional PCM audio via browser `AudioWorklet`s (`16 kHz` mic in, `24 kHz` voice out) connected to **Gemini 3.8 Live** (`gemini-3.8-live`), post-call family security report by **Gemini 4 Carbon** (`gemini-4-carbon`), and stock-voice scripted clips by **Gemini 3.8 Flash TTS** (`gemini-3.8-flash-tts`).
 - **10-Run Fake-Mic Hero Reliability:** **10 / 10 consecutive passes (100%)**
-- **Median `"Not me"` tap -> first assistant audio:** **0.711s** (target < 1.5s; best 10-run median `0.611s`)
-- **Median end of caller speech -> first assistant audio:** **1.662s** (best 10-run median `1.553s`; scenario clips `1.20s–1.85s`)
+- **Median `"Not me"` tap -> first assistant audio:** **0.728s** (target < 1.5s; best 10-run median `0.611s`)
+- **Median end of caller speech -> first assistant audio:** **1.728s** (best 10-run median `1.553s`; scenario clips `1.20s–1.85s`)
 - **Scripted Caller Scenarios:** **3 / 3 passing** (Grandson bail scam -> verified & blocked; Bank fraud -> blocked immediately; Elm Street Pharmacy -> passed through ringing Ruth)
 
 ---

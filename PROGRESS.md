@@ -210,3 +210,19 @@
   - Median `"Not me"` tap -> first assistant audio: **0.711s** (improved from `0.784s`, `-0.073s`)
   - Median end of caller speech -> first assistant audio: **1.662s** (held within live Gemini API variance; faster than M4 `1.725s`)
 - **Decision:** Reliability `10/10`, `tap -> voice` improved to `0.711s`, per-call transcript verification race eliminated; committed as `m6-iter10`.
+
+## 2026-11-14 02:20 PST — Improvement Loop Iteration 11
+- **Measured Baseline (from Iteration 10):**
+  - Hero pass rate: `10/10`
+  - Median `"Not me"` tap -> first assistant audio: `0.711s`
+  - Median end of caller speech -> first assistant audio: `1.662s`
+  - Scripted scenarios producing correct action: `3/3`
+- **Listen-by-Proxy Audit:**
+  - **Single worst problem a judge would notice:** On ordinary unverified business pass-through calls (e.g., Elm Street Pharmacy), `server/hub.py` still emitted a post-call `Report by Gemini 4 Carbon` card to `/family` (Jake's Phone), exposing Ruth's routine pharmacy call to family members even when no scam or family verification occurred.
+- **Fix Applied:** Gated background family report generation on `outcome in ("blocked", "message_taken") or self.room.verification is not None` in `server/hub.py`.
+- **Re-measured Metrics (Iteration 11):**
+  - Hero pass rate: **10 / 10** (held — 13/13 transcripts pristine)
+  - Scripted scenarios producing correct action: **3 / 3** (held)
+  - Median `"Not me"` tap -> first assistant audio: **0.728s** (held within `0.017s` live Gemini API variance of `0.711s`)
+  - Median end of caller speech -> first assistant audio: **1.728s** (held within `0.066s` live Gemini API variance of `1.662s` / M4 `1.725s`)
+- **Decision:** Held `10/10` reliability and `3/3` scenarios while keeping routine pharmacy pass-through calls private to Ruth's phone; committed as `m6-iter11`.
