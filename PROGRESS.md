@@ -42,3 +42,11 @@
   - `speech_to_first_audio_s`: `1.445s`
   - `tap_to_first_audio_s`: `0.502s`
   - `post_tap_played_s`: `1.11s` (> 1.0s played in browser AudioWorklet)
+
+## 2026-11-14 01:02 PST — Milestone M4 Complete (`m4`)
+- Built `scripts/run_eval.py` running all 3 scripted scenario clips through `/demo` + 10 consecutive Playwright fake-microphone hero browser runs.
+- **M4 Baseline Metrics:**
+  - Hero pass rate: **10 / 10 (100%)**
+  - Scripted scenarios correct action: **3 / 3** (`grandson`: blocked after verification, `bank`: blocked immediately, `pharmacy`: passed through ringing Ruth)
+  - Median `speech_to_first_audio_s`: **1.725s** (range `1.466s`–`2.298s`)
+  - Median `tap_to_first_audio_s`: **0.782s** (range `0.535s`–`1.372s`; target < `1.5s`)

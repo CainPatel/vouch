@@ -432,6 +432,7 @@ class GeminiLiveScreenerSession:
                 )
                 if already_spoke:
                     instr = "Call marked blocked. Do not add anything further."
+                    self._spawn(self.controller.finish_call_after_speech(delay_s=2.4))
                 elif self._verification_outcome == "denied":
                     instr = f"Call marked blocked. Now speak out loud to the caller: '{self._verified_name or 'Jake'} says he isn't calling. Goodbye.'"
                 else:
@@ -452,6 +453,8 @@ class GeminiLiveScreenerSession:
                 await self.controller.tool_pass_through(summary=summary)
                 self._pending_hangup = True
                 already_spoke = self._turn_audio_bytes >= 12000
+                if already_spoke:
+                    self._spawn(self.controller.finish_call_after_speech(delay_s=2.4))
                 instr = (
                     "Call connected."
                     if already_spoke
