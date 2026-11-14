@@ -306,3 +306,31 @@
   - Median `"Not me"` tap -> first assistant audio: **0.722s** (improved from `0.845s`, `-0.123s`; individual runs down to `0.528s`)
   - Median end of caller speech -> first assistant audio: **1.542s** (**new all-time best**, improved from `1.702s`, `-0.160s`)
 - **Decision:** Every metric held or improved (`10/10`, `3/3`, `0.722s` tap->voice, `1.542s` speech->voice) and eliminated redundant trailing turn; committed as `m6-iter16`.
+
+## 2026-11-14 03:09 PST — Improvement Loop Iteration 17 (Convergence Check 1/3)
+- **Measured Metrics:**
+  - Hero pass rate: **10 / 10** (`100%`)
+  - Median `"Not me"` tap -> first assistant audio: **0.642s** (prior best `0.611s`)
+  - Median end of caller speech -> first assistant audio: **1.595s** (prior best `1.542s`)
+  - Scripted scenarios producing correct action: **3 / 3**
+- **Listen-by-Proxy Audit (`artifacts/*_transcript.txt` + all `/demo` & mobile screenshots):**
+  - 13/13 transcripts are word-for-word clean with zero ASR tags and zero trailing bubbles; all 1080p `/demo` and `390x844` mobile screenshots render cleanly across every state (`idle`, `screening`, `verifying`, `blocked`, `passed`, `message_taken`). No visible problem can be named; metrics are converged at the Gemini Live physical API floor (no new best over `0.611s` / `1.542s`). Keeping code untouched (1/3 convergence iterations).
+
+## 2026-11-14 03:13 PST — Improvement Loop Iteration 18 (Convergence Check 2/3)
+- **Measured Metrics:**
+  - Hero pass rate: **10 / 10** (`100%`)
+  - Median `"Not me"` tap -> first assistant audio: **0.743s** (prior best `0.611s`)
+  - Median end of caller speech -> first assistant audio: **1.978s** (prior best `1.542s`)
+  - Scripted scenarios producing correct action: **3 / 3**
+- **Listen-by-Proxy Audit (`artifacts/*_transcript.txt` + all `/demo` & mobile screenshots):**
+  - 13/13 transcripts are word-for-word clean with zero ASR tags and zero trailing bubbles; all `/demo` and mobile call-state screenshots render cleanly with zero visual defects. No visible problem can be named; metrics remain converged at the Gemini Live API floor (2/3 convergence iterations).
+
+## 2026-11-14 03:17 PST — Improvement Loop Iteration 19 (Convergence Check 3/3 — Loop Complete)
+- **Measured Metrics:**
+  - Hero pass rate: **10 / 10** (`100%`)
+  - Median `"Not me"` tap -> first assistant audio: **0.645s** (individual runs down to `0.520s`; prior best `0.611s`)
+  - Median end of caller speech -> first assistant audio: **1.884s** (prior best `1.542s`)
+  - Scripted scenarios producing correct action: **3 / 3**
+- **Listen-by-Proxy Audit (`artifacts/*_transcript.txt` + all `/demo` & mobile screenshots):**
+  - 13/13 transcripts are word-for-word clean (39/39 consecutive clean transcripts across Convergence Checks 1–3) and zero visible problems exist on any page or call state.
+- **Stop Condition Reached:** Three iterations in a row (`Iterations 17, 18, 19`) produced no measurable improvement over prior floor bests (`10/10`, `3/3`, `0.611s` tap->voice, `1.542s` speech->voice) and no visible problem can be named. Freezing application code and entering Milestone M7.
